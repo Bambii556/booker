@@ -1,0 +1,100 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: booker
+      POSTGRES_PASSWORD: booker
+      POSTGRES_DB: booker
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # - ./drizzle/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booker -d booker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    ports:
+      - "5434:5432"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: booker
+      DB_PASSWORD: booker
+      DB_NAME: booker
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "200"
+      DEFAULT_POOL_SIZE: "20"
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "echo -e '\\x00\\x00\\x00\\x03' | nc -w 1 db 5432 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: your-super-secret-key-change-in-production
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    volumes:
+      - ./drizzle/migrations:/app/drizzle/migrations:ro
+
+  init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      db:
+        condition: service_healthy
+    entrypoint: ["npx", "tsx", "scripts/docker-init.ts"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
