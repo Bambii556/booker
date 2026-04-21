@@ -116,7 +116,7 @@ export default function MainLayout({
             href="/admin"
             className="hover:text-foreground transition-colors text-xs"
           >
-            Admin
+            .
           </Link>
         </div>
       </footer>
