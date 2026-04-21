@@ -32,6 +32,6 @@ describe('BranchCard', () => {
   it('has correct link to appointments page', () => {
     render(<BranchCard branch={mockBranch} />);
     const link = screen.getByRole('link', { name: /book appointment at sandton main branch/i });
-    expect(link).toHaveAttribute('href', '/appointments/550e8400-e29b-41d4-a716-446655440001');
+    expect(link).toHaveAttribute('href', '/branches/appointments/550e8400-e29b-41d4-a716-446655440001');
   });
 });
