@@ -12,7 +12,7 @@ interface ConfirmationCardProps {
   branchAddress: string;
   scheduledAt: Date;
   updatedAt?: Date | null;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'archived';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'archived';
   userEmail: string;
   isProcessing: boolean;
 }
@@ -67,6 +67,8 @@ END:VCALENDAR`;
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : status === 'confirmed' ? (
             <Check className="h-8 w-8 text-green-600" />
+          ) : status === 'completed' ? (
+            <Check className="h-8 w-8 text-muted-foreground" />
           ) : status === 'cancelled' || status === 'archived' ? (
             <X className="h-8 w-8 text-red-500" />
           ) : (
@@ -78,11 +80,13 @@ END:VCALENDAR`;
             ? 'Processing Your Booking...'
             : status === 'confirmed'
               ? 'Appointment Confirmed!'
-              : status === 'cancelled'
-                ? 'Appointment Cancelled'
-                : status === 'archived'
-                  ? 'Appointment Expired'
-                  : 'Booking Pending'}
+              : status === 'completed'
+                ? 'Appointment Completed'
+                : status === 'cancelled'
+                  ? 'Appointment Cancelled'
+                  : status === 'archived'
+                    ? 'Appointment Archived'
+                    : 'Booking Pending'}
         </CardTitle>
         <p className="text-sm text-muted-foreground font-mono mt-2">
           Reference: {bookingReference}
@@ -112,17 +116,26 @@ END:VCALENDAR`;
           </div>
         </div>
 
+        {status === 'completed' && (
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Check className="h-5 w-5 shrink-0" />
+              <p className="font-medium">This appointment has been completed.</p>
+            </div>
+          </div>
+        )}
+
         {(status === 'cancelled' || status === 'archived') && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-1">
             <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
               <X className="h-5 w-5 shrink-0" />
               <p className="font-medium">
-                {status === 'cancelled' ? 'This appointment has been cancelled.' : 'This appointment has expired.'}
+                {status === 'cancelled' ? 'This appointment has been cancelled.' : 'This appointment has been archived.'}
               </p>
             </div>
             {updatedAt && (
               <p className="text-sm text-red-700 dark:text-red-300 pl-7">
-                {status === 'cancelled' ? 'Cancelled' : 'Expired'} on{' '}
+                {status === 'cancelled' ? 'Cancelled' : 'Archived'} on{' '}
                 {format(toZonedTime(updatedAt, 'Africa/Johannesburg'), 'EEEE, MMMM d, yyyy \'at\' HH:mm')}
               </p>
             )}

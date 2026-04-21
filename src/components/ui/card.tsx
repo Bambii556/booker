@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { HTMLAttributes } from "react";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -7,11 +8,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 function Card({ className = "", hoverable = false, ...props }: CardProps) {
   return (
     <div
-      className={`
-        rounded-xl border border-border bg-card text-card-foreground shadow-sm
-        ${hoverable ? "transition-all hover:shadow-md hover:border-primary" : ""}
-        ${className}
-      `}
+      className={cn([
+        "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
+        hoverable ? "transition-all hover:shadow-md hover:border-primary" : "",
+        className,
+      ])}
       {...props}
     />
   );

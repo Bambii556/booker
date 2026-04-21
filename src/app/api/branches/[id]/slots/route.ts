@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { branches, appointments } from "@/lib/db/schema";
-import { eq, and, gte, lt, ne } from "drizzle-orm";
+import { eq, and, gte, lt } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { startOfDay, endOfDay, parse } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
@@ -66,13 +66,11 @@ export async function GET(
         eq(appointments.branchId, id),
         gte(appointments.scheduledAt, dayStartUTC),
         lt(appointments.scheduledAt, dayEndUTC),
-        ne(appointments.status, "cancelled"),
+        eq(appointments.status, "confirmed"),
       ),
     });
 
-    const bookedTimes = bookedAppointments
-      .filter((a) => a.status === "confirmed" || a.status === "pending")
-      .map((a) => a.scheduledAt);
+    const bookedTimes = bookedAppointments.map((a) => a.scheduledAt);
 
     const branchData: BranchWithAvailability = {
       id: branch.id,

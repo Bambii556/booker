@@ -163,6 +163,20 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   }),
 }));
 
+export const jobRuns = pgTable("job_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  jobName: text("job_name").notNull(),
+  status: text("status").notNull().default("running"),
+  triggeredBy: text("triggered_by").notNull().default("scheduled"),
+  affectedRows: t.integer("affected_rows"),
+  durationMs: t.integer("duration_ms"),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+});
+
+export type JobRun = typeof jobRuns.$inferSelect;
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")

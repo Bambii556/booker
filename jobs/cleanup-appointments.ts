@@ -2,11 +2,11 @@ import { db } from '../src/lib/db';
 import { appointments } from '../src/lib/db/schema';
 import { eq, lte, and } from 'drizzle-orm';
 
-const ARCHIVE_AFTER_MINUTES = 30;
+const ARCHIVE_AFTER_MONTHS = 6;
 
 export async function cleanupOldAppointments() {
-  const cutoffTime = new Date();
-  cutoffTime.setMinutes(cutoffTime.getMinutes() - ARCHIVE_AFTER_MINUTES);
+  const cutoffDate = new Date();
+  cutoffDate.setMonth(cutoffDate.getMonth() - ARCHIVE_AFTER_MONTHS);
 
   const archived = await db
     .update(appointments)
@@ -16,12 +16,12 @@ export async function cleanupOldAppointments() {
     })
     .where(
       and(
-        eq(appointments.status, 'confirmed'),
-        lte(appointments.scheduledAt, cutoffTime)
+        eq(appointments.status, 'completed'),
+        lte(appointments.scheduledAt, cutoffDate)
       )
     )
     .returning({ id: appointments.id });
 
-  console.log(`[cleanup] archived ${archived.length} appointment(s)`);
+  console.log(`[cleanup-appointments] archived ${archived.length} appointment(s) older than ${ARCHIVE_AFTER_MONTHS} months`);
   return archived.length;
 }

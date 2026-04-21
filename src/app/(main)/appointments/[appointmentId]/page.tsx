@@ -14,7 +14,7 @@ interface Appointment {
   bookingReference: string;
   scheduledAt: Date;
   updatedAt: Date | null;
-  status: "pending" | "confirmed" | "cancelled" | "archived";
+  status: "pending" | "confirmed" | "completed" | "cancelled" | "archived";
   branch: {
     id: string;
     name: string;
