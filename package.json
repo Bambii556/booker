@@ -16,7 +16,7 @@
     "worker": "tsx jobs/index.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:up": "podman compose -f docker-compose.test.yml up -d",
+    "test:up": "podman compose -f docker-compose.test.yml up -d --remove-orphans",
     "test:down": "podman compose -f docker-compose.test.yml down",
     "test:setup": "npm run test:up && npm run db:push:test && npm run db:seed:test",
     "db:push:test": "cross-env DATABASE_URL=postgresql://booker:booker@localhost:5435/booker_test drizzle-kit push",
@@ -38,7 +38,8 @@
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -3,6 +3,14 @@ import { db } from '@/lib/db';
 import { appointments } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { AppointmentIdSchema } from '@/lib/validations';
+import {
+  unauthorizedError,
+  notFoundError,
+  conflictError,
+  internalError,
+  handleZodError,
+} from '@/lib/api-error';
 
 export async function POST(
   request: NextRequest,
@@ -14,13 +22,15 @@ export async function POST(
     });
 
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'You must be logged in' },
-        { status: 401 }
-      );
+      return unauthorizedError('You must be logged in');
     }
 
     const { id } = await params;
+    const validation = AppointmentIdSchema.safeParse({ id });
+
+    if (!validation.success) {
+      return handleZodError(validation.error);
+    }
 
     const appointment = await db.query.appointments.findFirst({
       where: and(
@@ -30,10 +40,7 @@ export async function POST(
     });
 
     if (!appointment) {
-      return NextResponse.json(
-        { success: false, error: 'NOT_FOUND', message: 'Appointment not found' },
-        { status: 404 }
-      );
+      return notFoundError('Appointment not found');
     }
 
     if (appointment.status === 'confirmed') {
@@ -67,10 +74,7 @@ export async function POST(
       const code = err.code || (err.cause as { code?: string })?.code;
       
       if (code === '23505') {
-        return NextResponse.json(
-          { success: false, error: 'SLOT_TAKEN', message: 'Sorry! Someone else just booked this time slot. It happened while you were waiting.' },
-          { status: 409 }
-        );
+        return conflictError('Sorry! Someone else just booked this time slot. It happened while you were waiting.');
       }
       throw error;
     }
@@ -89,9 +93,6 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error confirming appointment:', error);
-    return NextResponse.json(
-      { success: false, error: 'CONFIRM_ERROR', message: 'Failed to confirm appointment' },
-      { status: 500 }
-    );
+    return internalError('Failed to confirm appointment', error);
   }
 }

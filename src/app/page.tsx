@@ -1,21 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/auth-client';
 import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function HomePage() {
-  const router = useRouter();
-  const { data: session, isPending } = useSession();
-
-  useEffect(() => {
-    if (!isPending && session) {
-      router.replace('/dashboard');
-    }
-  }, [session, isPending, router]);
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -63,7 +63,9 @@ export default function DashboardPage() {
   const { data: session, isPending: sessionPending } = useSession();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(
+    null,
+  );
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
@@ -72,7 +74,11 @@ export default function DashboardPage() {
     }
   }, [session, sessionPending, router]);
 
-  const { data: appointmentsData, isLoading, refetch } = useQuery({
+  const {
+    data: appointmentsData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["appointments"],
     queryFn: fetchAppointments,
     enabled: !!session,
@@ -174,7 +180,10 @@ export default function DashboardPage() {
               : `${upcomingAppointments.length} upcoming`}
           </p>
         </div>
-        <Button onClick={() => router.push("/branches")} className="sm:order-last">
+        <Button
+          onClick={() => router.push("/branches")}
+          className="sm:order-last"
+        >
           Book Appointment
         </Button>
       </div>
@@ -328,7 +337,7 @@ function AppointmentCard({
             <button
               onClick={onCancel}
               disabled={isCancelling}
-              className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 transition-all"
+              className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 transition-all cursor-pointer"
               title="Cancel appointment"
             >
               {isCancelling ? (
@@ -340,7 +349,9 @@ function AppointmentCard({
           )}
         </div>
 
-        <h3 className="font-semibold text-lg mb-2">{appointment.branch.name}</h3>
+        <h3 className="font-semibold text-lg mb-2">
+          {appointment.branch.name}
+        </h3>
 
         <div className="space-y-2 text-sm text-muted-foreground600 dark:text-muted-foreground">
           <div className="flex items-center gap-2">

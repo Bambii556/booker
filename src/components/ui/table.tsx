@@ -37,6 +37,6 @@ export function TableHead({ children, className = "" }: { children: React.ReactN
   );
 }
 
-export function TableCell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`p-4 align-middle ${className}`}>{children}</td>;
+export function TableCell({ children, className = "", colSpan }: { children: React.ReactNode; className?: string; colSpan?: number }) {
+  return <td className={`p-4 align-middle ${className}`} colSpan={colSpan}>{children}</td>;
 }

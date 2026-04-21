@@ -3,7 +3,8 @@ import redis from "@/lib/redis";
 
 export async function GET() {
   try {
-    const keys: string[] = [];
+    type RedisKey = { key: string; type: string; value: string | null; ttl: number | null; ttlReadable: string | null };
+  const keys: RedisKey[] = [];
     
     const cursor = "0";
     const [nextCursor, batch] = await redis.scan(cursor, "MATCH", "*", "COUNT", 100);

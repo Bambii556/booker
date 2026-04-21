@@ -2,6 +2,8 @@ import { db } from '@/lib/db';
 import { branches } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { BranchIdSchema } from '@/lib/validations';
+import { notFoundError, internalError, handleZodError } from '@/lib/api-error';
 
 export async function GET(
   request: NextRequest,
@@ -9,24 +11,23 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const validation = BranchIdSchema.safeParse({ id });
+
+    if (!validation.success) {
+      return handleZodError(validation.error);
+    }
 
     const branch = await db.query.branches.findFirst({
       where: eq(branches.id, id),
     });
 
     if (!branch) {
-      return NextResponse.json(
-        { success: false, error: 'NOT_FOUND', message: 'Branch not found' },
-        { status: 404 }
-      );
+      return notFoundError('Branch not found');
     }
 
     return NextResponse.json({ success: true, data: branch });
   } catch (error) {
     console.error('Error fetching branch:', error);
-    return NextResponse.json(
-      { success: false, error: 'FETCH_ERROR', message: 'Failed to fetch branch' },
-      { status: 500 }
-    );
+    return internalError('Failed to fetch branch', error);
   }
 }

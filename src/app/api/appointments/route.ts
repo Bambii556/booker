@@ -4,6 +4,15 @@ import { appointments, branches } from '@/lib/db/schema';
 import { eq, and, or, desc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { fromZonedTime } from 'date-fns-tz';
+import { BookAppointmentSchema } from '@/lib/validations';
+import {
+  unauthorizedError,
+  notFoundError,
+  conflictError,
+  internalError,
+  handleZodError,
+  isDatabaseConstraintError,
+} from '@/lib/api-error';
 
 function generateBookingReference(): string {
   const year = new Date().getFullYear();
@@ -18,10 +27,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'You must be logged in' },
-        { status: 401 }
-      );
+      return unauthorizedError('You must be logged in');
     }
 
     const userAppointments = await db.query.appointments.findMany({
@@ -35,10 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: userAppointments });
   } catch (error) {
     console.error('Error fetching appointments:', error);
-    return NextResponse.json(
-      { success: false, error: 'FETCH_ERROR', message: 'Failed to fetch appointments' },
-      { status: 500 }
-    );
+    return internalError('Failed to fetch appointments', error);
   }
 }
 
@@ -49,31 +52,24 @@ export async function POST(request: NextRequest) {
     });
 
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'You must be logged in' },
-        { status: 401 }
-      );
+      return unauthorizedError('You must be logged in');
     }
 
     const body = await request.json();
-    const { branchId, scheduledAt } = body;
+    const validation = BookAppointmentSchema.safeParse(body);
 
-    if (!branchId || !scheduledAt) {
-      return NextResponse.json(
-        { success: false, error: 'VALIDATION_ERROR', message: 'Branch ID and scheduled time are required' },
-        { status: 400 }
-      );
+    if (!validation.success) {
+      return handleZodError(validation.error);
     }
+
+    const { branchId, scheduledAt } = validation.data;
 
     const branch = await db.query.branches.findFirst({
       where: eq(branches.id, branchId),
     });
 
     if (!branch) {
-      return NextResponse.json(
-        { success: false, error: 'NOT_FOUND', message: 'Branch not found' },
-        { status: 404 }
-      );
+      return notFoundError('Branch not found');
     }
 
     const scheduledDate = new Date(scheduledAt);
@@ -91,10 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingAppointment) {
-      return NextResponse.json(
-        { success: false, error: 'SLOT_TAKEN', message: 'This time slot is no longer available' },
-        { status: 409 }
-      );
+      return conflictError('This time slot is no longer available');
     }
 
     const bookingReference = generateBookingReference();
@@ -111,16 +104,10 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Error creating appointment:', error);
     
-    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
-      return NextResponse.json(
-        { success: false, error: 'SLOT_TAKEN', message: 'This time slot was just booked by someone else' },
-        { status: 409 }
-      );
+    if (isDatabaseConstraintError(error)) {
+      return conflictError('This time slot was just booked by someone else');
     }
 
-    return NextResponse.json(
-      { success: false, error: 'CREATE_ERROR', message: 'Failed to create appointment' },
-      { status: 500 }
-    );
+    return internalError('Failed to create appointment', error);
   }
 }

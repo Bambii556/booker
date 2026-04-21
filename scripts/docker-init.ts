@@ -13,10 +13,12 @@ if (!connectionString) {
   process.exit(1);
 }
 
+const dbUrl: string = connectionString;
+
 async function waitForDatabase(maxAttempts = 30): Promise<boolean> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const testClient = postgres(connectionString, { prepare: false });
+      const testClient = postgres(dbUrl, { prepare: false });
       await testClient`SELECT 1`;
       await testClient.end();
       return true;
@@ -43,7 +45,7 @@ async function getBranchCount(client: postgres.Sql): Promise<number> {
 
 async function runMigrations() {
   console.log('Running migrations...');
-  const client = postgres(connectionString, { prepare: false });
+  const client = postgres(dbUrl, { prepare: false });
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: './drizzle/migrations' });
   await client.end();
@@ -79,7 +81,7 @@ async function main() {
   await runMigrations();
 
   console.log('Checking if seed data is needed...');
-  const client = postgres(connectionString, { prepare: false });
+  const client = postgres(dbUrl, { prepare: false });
   
   const exists = await tableExists(client);
   if (exists) {

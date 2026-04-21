@@ -7,6 +7,12 @@ import { fromZonedTime } from "date-fns-tz";
 import { generateSlots } from "@/lib/slots";
 import { checkLock } from "@/lib/locks";
 import type { BranchWithAvailability } from "@/types";
+import { BranchIdSchema, SlotDateQuerySchema } from "@/lib/validations";
+import {
+  notFoundError,
+  internalError,
+  handleZodError,
+} from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +20,12 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const branchValidation = BranchIdSchema.safeParse({ id });
+
+    if (!branchValidation.success) {
+      return handleZodError(branchValidation.error);
+    }
+
     const { searchParams } = new URL(request.url);
     const dateStr = searchParams.get("date");
 
@@ -28,15 +40,18 @@ export async function GET(
       );
     }
 
+    const dateValidation = SlotDateQuerySchema.safeParse({ date: dateStr });
+
+    if (!dateValidation.success) {
+      return handleZodError(dateValidation.error);
+    }
+
     const branch = await db.query.branches.findFirst({
       where: eq(branches.id, id),
     });
 
     if (!branch) {
-      return NextResponse.json(
-        { success: false, error: "NOT_FOUND", message: "Branch not found" },
-        { status: 404 },
-      );
+      return notFoundError("Branch not found");
     }
 
     const selectedDate = parse(dateStr, "yyyy-MM-dd", new Date());
@@ -89,13 +104,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching slots:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "FETCH_ERROR",
-        message: "Failed to fetch slots",
-      },
-      { status: 500 },
-    );
+    return internalError("Failed to fetch slots", error);
   }
 }
