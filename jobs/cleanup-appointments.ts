@@ -1,5 +1,5 @@
-import { db } from '@/lib/db';
-import { appointments } from '@/lib/db/schema';
+import { db } from '../src/lib/db';
+import { appointments } from '../src/lib/db/schema';
 import { eq, lte, and } from 'drizzle-orm';
 
 const ARCHIVE_AFTER_MINUTES = 30;
@@ -8,7 +8,7 @@ export async function cleanupOldAppointments() {
   const cutoffTime = new Date();
   cutoffTime.setMinutes(cutoffTime.getMinutes() - ARCHIVE_AFTER_MINUTES);
 
-  const result = await db
+  const archived = await db
     .update(appointments)
     .set({
       status: 'archived',
@@ -19,7 +19,9 @@ export async function cleanupOldAppointments() {
         eq(appointments.status, 'confirmed'),
         lte(appointments.scheduledAt, cutoffTime)
       )
-    );
+    )
+    .returning({ id: appointments.id });
 
-  return result;
+  console.log(`[cleanup] archived ${archived.length} appointment(s)`);
+  return archived.length;
 }

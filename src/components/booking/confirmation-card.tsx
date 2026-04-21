@@ -150,16 +150,16 @@ END:VCALENDAR`;
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
-            className="flex-1"
+            className="w-full gap-2"
             onClick={() => window.location.href = '/dashboard'}
           >
             View All Appointments
           </Button>
           <Button
-            className="flex-1"
+            className="w-full gap-2"
             onClick={() => window.location.href = '/branches'}
           >
             Book Another

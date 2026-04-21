@@ -5,4 +5,4 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 
-CMD ["npx", "tsx", "jobs/index.ts"]
+CMD ["npx", "tsx", "scripts/docker-init.ts"]

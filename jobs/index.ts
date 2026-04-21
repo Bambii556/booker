@@ -1,4 +1,4 @@
-import boss from "@/lib/pgboss";
+import boss from "../src/lib/pgboss";
 import { cleanupOldAppointments } from "./cleanup-appointments";
 
 export const QUEUES = {

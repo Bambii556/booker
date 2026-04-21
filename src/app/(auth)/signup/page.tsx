@@ -24,6 +24,7 @@ export default function SignupPage() {
     const newErrors: typeof errors = {};
     if (!name) newErrors.name = 'Name is required';
     if (!email) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = 'Enter a valid email address';
     if (!password) newErrors.password = 'Password is required';
     if (password && password.length < 8) newErrors.password = 'Password must be at least 8 characters';
 

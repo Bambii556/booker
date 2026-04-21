@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -45,10 +45,11 @@ async function fetchBranches(page: number, search: string): Promise<BranchesResp
 
 export default function BranchesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending: sessionPending } = useSession();
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('search') ?? '');
+  const [page, setPage] = useState(() => Number(searchParams.get('page') ?? 1));
 
   useEffect(() => {
     if (!sessionPending && !session) {
@@ -60,9 +61,20 @@ export default function BranchesPage() {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('page', '1');
+      router.replace(`/branches?${params}`, { scroll: false });
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    params.set('page', page.toString());
+    router.replace(`/branches?${params}`, { scroll: false });
+  }, [page]);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['branches', page, debouncedSearch],

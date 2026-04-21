@@ -1,55 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/auth-client';
-import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
+    setFormError('');
 
-    if (!email) {
-      setErrors(prev => ({ ...prev, email: 'Email is required' }));
-      return;
-    }
-    if (!password) {
-      setErrors(prev => ({ ...prev, password: 'Password is required' }));
+    if (!email || !password) {
+      setFormError('Please enter your email and password.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = await signIn.email({
-        email,
-        password,
-      });
+      const { error } = await signIn.email({ email, password });
 
       if (error) {
-        toast.error('Invalid credentials', {
-          description: 'Please check your email and password',
-        });
+        setFormError('Incorrect email or password. Please try again.');
       } else {
-        toast.success('Welcome back!');
-        router.push('/dashboard');
+        router.push(callbackUrl);
         router.refresh();
       }
-    } catch (err) {
-      toast.error('Something went wrong', {
-        description: 'Please try again later',
-      });
+    } catch {
+      setFormError('Something went wrong. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -59,19 +57,22 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle>Welcome Back</CardTitle>
-        <CardDescription>
-          Sign in to your account to continue
-        </CardDescription>
+        <CardDescription>Sign in to your account to continue</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              {formError}
+            </div>
+          )}
           <Input
             label="Email"
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            error={errors.email}
             disabled={loading}
           />
           <Input
@@ -80,7 +81,6 @@ export default function LoginPage() {
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            error={errors.password}
             disabled={loading}
           />
           <Button type="submit" className="w-full" loading={loading}>

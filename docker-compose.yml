@@ -53,9 +53,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5432/booker
       REDIS_URL: redis://redis:6379
       BETTER_AUTH_SECRET: your-super-secret-key-change-in-production
+      BETTER_AUTH_URL: http://localhost:3000
+      TRUSTED_ORIGINS: http://localhost:3000
     depends_on:
       init:
         condition: service_completed_successfully
@@ -69,9 +71,9 @@ services:
   init:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.init
     environment:
-      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5432/booker
       REDIS_URL: redis://redis:6379
     depends_on:
       pgbouncer:
@@ -85,7 +87,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     environment:
-      DATABASE_URL: postgresql://booker:booker@pgbouncer:5434/booker
+      DATABASE_URL: postgresql://booker:booker@pgbouncer:5432/booker
       REDIS_URL: redis://redis:6379
     depends_on:
       pgbouncer:

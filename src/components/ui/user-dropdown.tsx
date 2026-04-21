@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
 import { toast } from 'sonner';
-import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, ChevronDown } from 'lucide-react';
 
 interface UserDropdownProps {
   user: {
@@ -50,10 +51,12 @@ export function UserDropdown({ user }: UserDropdownProps) {
       >
         <div className="w-8 h-8 rounded-full bg-primary dark:bg-primary flex items-center justify-center text-white dark:text-primary-foreground text-sm font-medium">
           {user.image ? (
-            <img
+            <Image
               src={user.image}
               alt={user.name || 'User'}
-              className="w-8 h-8 rounded-full"
+              width={32}
+              height={32}
+              className="rounded-full"
             />
           ) : (
             initials
@@ -71,7 +74,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
             <p className="text-sm font-medium truncate">
               {user.name || 'User'}
             </p>
-            <p className="text-xs text-muted-foreground500 dark:text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {user.email}
             </p>
           </div>
@@ -83,15 +86,6 @@ export function UserDropdown({ user }: UserDropdownProps) {
           >
             <User className="h-4 w-4 text-muted-foreground" />
             Profile
-          </Link>
-
-          <Link
-            href="/settings"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
-          >
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            Settings
           </Link>
 
           <div className="border-t border-border mt-1 pt-1">

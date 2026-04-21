@@ -3,17 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Loader2, Calendar, Clock, AlertTriangle } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { ConfirmationCard } from "@/components/booking/confirmation-card";
+import { CancelAppointmentDialog } from "@/components/booking/cancel-appointment-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -248,7 +241,7 @@ export default function ConfirmationPage() {
             </div>
           )}
 
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/dashboard"
               className="inline-flex items-center justify-center px-4 py-2 bg-muted100 dark:bg-muted800 text-muted-foreground900 dark:text-muted-foreground100 rounded-lg hover:bg-muted200 dark:hover:bg-muted700"
@@ -289,8 +282,8 @@ export default function ConfirmationPage() {
       {(appointment.status === "confirmed" || appointment.status === "pending") && (
         <div className="max-w-2xl mx-auto mt-6">
           <Button
-            variant="outline"
-            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+            variant="destructive-outline"
+            className="w-full"
             onClick={() => setShowDeleteDialog(true)}
           >
             Cancel Appointment
@@ -298,37 +291,13 @@ export default function ConfirmationPage() {
         </div>
       )}
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Cancel Appointment?
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this appointment? This action
-              cannot be undone and the appointment will be removed from your
-              list.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={deleting}
-            >
-              Keep Appointment
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              loading={deleting}
-            >
-              Cancel Appointment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelAppointmentDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        bookingReference={appointment?.bookingReference}
+        loading={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

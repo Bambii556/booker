@@ -10,20 +10,12 @@ import {
   CalendarPlus,
   Clock,
   MapPin,
-  AlertTriangle,
   Loader2,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CancelAppointmentDialog } from "@/components/booking/cancel-appointment-dialog";
 import { toast } from "sonner";
 
 interface Appointment {
@@ -248,36 +240,13 @@ export default function DashboardPage() {
         </>
       )}
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Cancel Appointment?
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this appointment? This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={!!cancellingId}
-            >
-              Keep Appointment
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              loading={!!cancellingId}
-            >
-              Cancel Appointment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelAppointmentDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        bookingReference={appointments.find(a => a.id === appointmentToDelete)?.bookingReference}
+        loading={!!cancellingId}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

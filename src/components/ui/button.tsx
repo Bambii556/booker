@@ -1,9 +1,10 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { forwardRef, ButtonHTMLAttributes } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "destructive-outline";
   size?: "sm" | "md" | "lg" | "icon";
   loading?: boolean;
 }
@@ -35,6 +36,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "hover:bg-muted hover:text-foreground",
       destructive:
         "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive",
+      "destructive-outline":
+        "border border-destructive bg-background text-destructive hover:bg-destructive/10 focus-visible:ring-destructive"
     };
 
     const sizes = {
@@ -47,7 +50,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+        className={cn([baseStyles,variants[variant],sizes[size],className])}
         disabled={disabled || loading}
         {...props}
       >
