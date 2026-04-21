@@ -93,10 +93,19 @@ async function acquireLock(
 async function releaseLock(branchId: string, slotTime: Date): Promise<void> {
   await fetch(
     `/api/locks?branchId=${branchId}&slotTime=${slotTime.toISOString()}`,
-    {
-      method: "DELETE",
-    },
+    { method: "DELETE" },
   );
+}
+
+async function fetchMyLock(): Promise<{
+  locked: boolean;
+  branchId?: string;
+  slotTime?: string;
+  ttl?: number;
+}> {
+  const res = await fetch("/api/locks/mine");
+  const data = await res.json();
+  return data.data ?? { locked: false };
 }
 
 async function getLockInfo(
@@ -205,30 +214,56 @@ export default function BookingPage({
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [selectedDate, selectedSlot, isRestoring, router]);
 
-  // Restore lock from localStorage on mount
+  // Restore lock from localStorage (primary) or server (fallback)
   useEffect(() => {
     const restoreLock = async () => {
+      if (!session?.user) return;
+
+      // Primary: localStorage
       const stored = localStorage.getItem("lockInfo");
-      if (stored && session?.user) {
+      if (stored) {
         try {
           const parsed = JSON.parse(stored) as LockInfo & { branchId: string };
           if (parsed.branchId === resolvedParams.branchId) {
             const lockCheck = await getLockInfo(resolvedParams.branchId, new Date(parsed.slotTime));
             if (lockCheck.locked && lockCheck.userId === session.user.id && lockCheck.ttl && lockCheck.ttl > 0) {
-              setSelectedSlot({ time: new Date(parsed.slotTime), available: true, locked: true });
+              const storedSlotDate = new Date(parsed.slotTime);
+              setSelectedDate(parseISO(format(storedSlotDate, "yyyy-MM-dd")));
+              setSelectedSlot({ time: storedSlotDate, available: true, locked: true });
               setLockInfo({
                 branchId: parsed.branchId,
                 slotTime: parsed.slotTime,
                 expiresAt: new Date(Date.now() + lockCheck.ttl * 1000),
               });
               setLockTTL(lockCheck.ttl);
-            } else {
-              localStorage.removeItem("lockInfo");
+              return;
             }
+            localStorage.removeItem("lockInfo");
           }
         } catch {
           localStorage.removeItem("lockInfo");
         }
+      }
+
+      // Fallback: server-side user lock index (covers cleared localStorage / other tabs)
+      const serverLock = await fetchMyLock();
+      if (
+        serverLock.locked &&
+        serverLock.branchId === resolvedParams.branchId &&
+        serverLock.slotTime &&
+        serverLock.ttl &&
+        serverLock.ttl > 0
+      ) {
+        const slotDate = new Date(serverLock.slotTime);
+        const dateOnly = parseISO(format(slotDate, "yyyy-MM-dd"));
+        setSelectedDate(dateOnly);
+        setSelectedSlot({ time: slotDate, available: true, locked: true });
+        setLockInfo({
+          branchId: resolvedParams.branchId,
+          slotTime: serverLock.slotTime,
+          expiresAt: new Date(Date.now() + serverLock.ttl * 1000),
+        });
+        setLockTTL(serverLock.ttl);
       }
     };
 
@@ -417,15 +452,6 @@ export default function BookingPage({
       toast.error("Failed to reserve slot");
     }
   };
-
-  // Cleanup lock on unmount — intentionally empty deps to run only once
-  useEffect(() => {
-    return () => {
-      if (lockInfo) {
-        releaseLock(lockInfo.branchId, new Date(lockInfo.slotTime));
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bookingMutation = useMutation({
     mutationFn: async () => {

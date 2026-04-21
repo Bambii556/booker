@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, message: 'Lock acquired' },
+      { success: true, message: 'Lock acquired', ttl: ttlSeconds ?? 300 },
       { status: 201 }
     );
   } catch (error) {
@@ -87,7 +87,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const slotDate = new Date(slotTime);
-    const success = await releaseLock(branchId, slotDate);
+    const success = await releaseLock(branchId, slotDate, session.user.id);
 
     return NextResponse.json(
       { success, message: success ? 'Lock released' : 'Lock not found' }

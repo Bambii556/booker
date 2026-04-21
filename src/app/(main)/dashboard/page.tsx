@@ -1,18 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
-import { format, isAfter } from "date-fns";
+import { format, isAfter, parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import {
   CalendarPlus, Clock, MapPin, Loader2,
-  Trash2, CheckCircle2, XCircle, Check,
+  Trash2, CheckCircle2, XCircle, Check, Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CancelAppointmentDialog } from "@/components/booking/cancel-appointment-dialog";
 import { toast } from "sonner";
+
+interface ActiveLock {
+  locked: boolean;
+  branchId?: string;
+  branchName?: string;
+  branchAddress?: string;
+  slotTime?: string;
+  ttl?: number;
+}
+
+async function fetchMyLock(): Promise<{ success: boolean; data: ActiveLock }> {
+  const res = await fetch("/api/locks/mine");
+  if (!res.ok) return { success: false, data: { locked: false } };
+  return res.json();
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 interface Appointment {
   id: string;
@@ -46,6 +67,9 @@ export default function DashboardPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [lockTTL, setLockTTL] = useState<number>(0);
+  const lockExpiresAtRef = useRef<Date | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!sessionPending && !session) router.push("/login");
@@ -55,7 +79,44 @@ export default function DashboardPage() {
     queryKey: ["appointments"],
     queryFn: fetchAppointments,
     enabled: !!session,
+    staleTime: 0,
   });
+
+  const { data: myLockData } = useQuery({
+    queryKey: ["my-lock"],
+    queryFn: fetchMyLock,
+    enabled: !!session,
+    refetchInterval: 15000,
+  });
+
+  const activeLock = myLockData?.data?.locked ? myLockData.data : null;
+
+  // Countdown for the active lock
+  useEffect(() => {
+    if (activeLock?.ttl && activeLock.ttl > 0) {
+      lockExpiresAtRef.current = new Date(Date.now() + activeLock.ttl * 1000);
+      setLockTTL(activeLock.ttl);
+    }
+  }, [activeLock?.ttl]);
+
+  useEffect(() => {
+    if (!lockExpiresAtRef.current) return;
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.floor((lockExpiresAtRef.current!.getTime() - Date.now()) / 1000),
+      );
+      setLockTTL(remaining);
+      if (remaining <= 0 && intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [lockExpiresAtRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (appointmentsData?.data) setAppointments(appointmentsData.data);
@@ -138,6 +199,40 @@ export default function DashboardPage() {
           Book Appointment
         </Button>
       </div>
+
+      {/* In-progress reservation banner */}
+      {activeLock && activeLock.slotTime && lockTTL > 0 && (
+        <div className="mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+              <Timer className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-amber-800 dark:text-amber-200 truncate">
+                Slot reserved — {activeLock.branchName}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                {format(toZonedTime(parseISO(activeLock.slotTime), "Africa/Johannesburg"), "EEEE, MMMM d 'at' HH:mm")}
+                {" · "}
+                {formatTime(lockTTL)} remaining
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={() => {
+              const slotDate = parseISO(activeLock.slotTime!);
+              const dateStr = format(slotDate, "yyyy-MM-dd");
+              router.push(
+                `/branches/appointments/${activeLock.branchId}?date=${dateStr}&slot=${encodeURIComponent(activeLock.slotTime!)}`,
+              );
+            }}
+          >
+            Continue Booking
+          </Button>
+        </div>
+      )}
 
       {/* Empty state */}
       {appointments.length === 0 && (
@@ -259,7 +354,7 @@ function AppointmentCard({
             <button
               onClick={onCancel}
               disabled={isCancelling}
-              className="opacity-0 group-hover:opacity-100 p-2 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:ring-1 hover:ring-red-200 dark:hover:ring-red-800 transition-all"
+              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:ring-1 hover:ring-red-200 dark:hover:ring-red-800 transition-all"
               title="Cancel appointment"
             >
               {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
