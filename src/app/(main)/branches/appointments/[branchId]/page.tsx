@@ -15,7 +15,6 @@ import {
   Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SlotGrid } from "@/components/booking/slot-grid";
 import { toast } from "sonner";
@@ -467,10 +466,8 @@ export default function BookingPage({
 
   if (sessionPending || loadingBranch) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -479,109 +476,125 @@ export default function BookingPage({
 
   if (!branch) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <h3 className="text-lg font-semibold mb-2">Branch not found</h3>
-            <p className="text-muted-foreground600 dark:text-muted-foreground mb-4">
-              The branch you&apos;re looking for doesn&apos;t exist.
-            </p>
-            <Button onClick={() => router.push("/branches")}>
-              Browse Branches
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <p className="text-lg font-semibold mb-2">Branch not found</p>
+        <p className="text-muted-foreground mb-6">The branch you&apos;re looking for doesn&apos;t exist.</p>
+        <Button onClick={() => router.push("/branches")}>Browse Branches</Button>
       </div>
     );
   }
 
+  const step = !selectedDate ? 1 : !selectedSlot ? 2 : 3;
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
+
+      {/* Back */}
       <Link
         href="/branches"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground600 dark:text-muted-foreground hover:text-muted-foreground900 dark:hover:text-muted-foreground100 mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to branches
       </Link>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-2xl">{branch.name}</CardTitle>
-          <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground600 dark:text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" />
-              <span>{branch.address}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" />
-              <span>
-                {branch.openingTime.slice(0, 5)} -{" "}
-                {branch.closingTime.slice(0, 5)}
-              </span>
-            </div>
+      {/* Branch header */}
+      <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <MapPin className="h-6 w-6 text-primary" />
           </div>
-        </CardHeader>
-      </Card>
-
-      {lockInfo && lockTTL > 0 && (
-        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Timer className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              <div>
-                <p className="font-medium text-amber-800 dark:text-amber-200">
-                  {format(parseISO(lockInfo.slotTime), "EEEE, MMMM d, yyyy 'at' HH:mm")}
-                </p>
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                  Complete your booking before the timer expires
-                </p>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold truncate">{branch.name}</h1>
+            <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span>{branch.address}</span>
               </div>
-            </div>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {formatTime(lockTTL)}
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>Open {branch.openingTime.slice(0, 5)} – {branch.closingTime.slice(0, 5)}, weekdays</span>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Select Date
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Step indicators */}
+      <div className="flex items-center gap-2 mb-8">
+        {[
+          { n: 1, label: "Choose a date" },
+          { n: 2, label: "Choose a time" },
+          { n: 3, label: "Confirm" },
+        ].map(({ n, label }, i) => {
+          const done = step > n;
+          const active = step === n;
+          return (
+            <div key={n} className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : done ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${active ? "bg-primary text-white" : done ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  {done ? <Check className="h-3.5 w-3.5" /> : n}
+                </div>
+                <span className="hidden sm:inline">{label}</span>
+              </div>
+              {i < 2 && <div className={`flex-1 h-px w-8 transition-colors ${step > n ? "bg-primary/40" : "bg-border"}`} />}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main booking area */}
+      <div className="grid gap-6 lg:grid-cols-2">
+
+        {/* Step 1 — Date picker */}
+        <div className={`bg-card border rounded-2xl overflow-hidden transition-all ${step === 1 ? "border-primary/50 shadow-md" : "border-border"}`}>
+          <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step > 1 ? "bg-primary/20 text-primary" : "bg-primary text-white"}`}>
+              {step > 1 ? <Check className="h-3.5 w-3.5" /> : "1"}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">Choose a date</p>
+              {selectedDate && (
+                <p className="text-xs text-primary font-medium">{format(selectedDate, "EEEE, MMMM d, yyyy")}</p>
+              )}
+            </div>
+          </div>
+          <div className="p-5">
             <DatePicker
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
               minDate={new Date()}
               maxDaysAhead={30}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="overflow-hidden">
+        {/* Step 2 — Slot picker */}
+        <div className={`bg-card border rounded-2xl overflow-hidden transition-all ${step === 2 ? "border-primary/50 shadow-md" : "border-border"}`}>
           {loadingSlots && (
-            <div className="h-1 w-full bg-muted overflow-hidden">
+            <div className="h-0.5 w-full bg-muted overflow-hidden">
               <div className="h-full w-1/2 bg-primary rounded-full animate-[loading-bar_1s_ease-in-out_infinite]" />
             </div>
           )}
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              {selectedDate
-                ? `Available Slots - ${format(selectedDate, "EEEE, MMMM d")}`
-                : "Select a date to see slots"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step > 2 ? "bg-primary/20 text-primary" : step === 2 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+              {step > 2 ? <Check className="h-3.5 w-3.5" /> : "2"}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">Choose a time</p>
+              {selectedDate && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedDate ? `Slots for ${format(selectedDate, "MMM d")}` : "Select a date first"}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="p-5">
             {!selectedDate ? (
-              <p className="text-center text-muted-foreground500 dark:text-muted-foreground py-8">
-                Please select a date to view available time slots
-              </p>
+              <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                <CalendarIcon className="h-8 w-8 text-muted-foreground opacity-40" />
+                <p className="text-sm text-muted-foreground">Select a date on the left to see available times</p>
+              </div>
             ) : (
               <SlotGrid
                 slots={slots}
@@ -591,32 +604,61 @@ export default function BookingPage({
                 userLockedSlot={lockInfo ? new Date(lockInfo.slotTime) : null}
               />
             )}
-
-            {selectedSlot && (
-              <div className="mt-6 pt-6 border-t border-muted200 dark:border-muted800">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium">Selected Time</p>
-                    <p className="text-sm text-muted-foreground600 dark:text-muted-foreground">
-                      {format(selectedSlot.time, "EEEE, MMMM d, yyyy")} at{" "}
-                      {format(selectedSlot.time, "HH:mm")}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => bookingMutation.mutate()}
-                    loading={bookingMutation.isPending}
-                    disabled={!lockInfo}
-                    className="gap-2"
-                  >
-                    <Check className="h-4 w-4" />
-                    Book Appointment
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
+
+      {/* Reservation timer */}
+      {lockInfo && lockTTL > 0 && (
+        <div className="my-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+              <Timer className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-amber-800 dark:text-amber-200">
+                Slot reserved — {format(parseISO(lockInfo.slotTime), "EEEE, MMMM d 'at' HH:mm")}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                Complete your booking before the timer runs out
+              </p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 shrink-0">
+            {formatTime(lockTTL)}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3 — Confirm booking */}
+      {selectedSlot && (
+        <div className="mt-6 bg-card border border-primary/40 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Check className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-bold">Ready to confirm</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {branch.name} · {format(selectedSlot.time, "EEEE, MMMM d, yyyy")} at {format(selectedSlot.time, "HH:mm")}
+              </p>
+              {!lockInfo && (
+                <p className="text-xs text-amber-600 mt-1">Waiting for slot to be reserved…</p>
+              )}
+            </div>
+          </div>
+          <Button
+            onClick={() => bookingMutation.mutate()}
+            loading={bookingMutation.isPending}
+            disabled={!lockInfo}
+            size="lg"
+            className="w-full sm:w-auto shrink-0"
+          >
+            Confirm Booking
+          </Button>
+        </div>
+      )}
+
     </div>
   );
 }

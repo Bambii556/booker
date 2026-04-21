@@ -23,12 +23,9 @@ export function SlotGrid({
 }: SlotGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
         {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-14 rounded-lg bg-muted100 dark:bg-muted800 animate-pulse"
-          />
+          <div key={i} className="h-12 rounded-xl bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -36,59 +33,58 @@ export function SlotGrid({
 
   if (slots.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-500 dark:text-muted-400">
-        <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>No slots available for this day</p>
+      <div className="text-center py-10 text-muted-foreground">
+        <Clock className="h-10 w-10 mx-auto mb-2 opacity-40" />
+        <p className="text-sm">No slots available for this day</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
       {slots.map((slot) => {
-        const isSelected =
-          selectedSlot && slot.time.getTime() === selectedSlot.getTime();
-        const formattedTime = format(
-          toZonedTime(slot.time, "Africa/Johannesburg"),
-          "HH:mm",
-        );
+        const isSelected = selectedSlot && slot.time.getTime() === selectedSlot.getTime();
+        const isUserLocked = userLockedSlot && slot.time.getTime() === userLockedSlot.getTime();
+        const isLockedByOther = slot.locked && slot.available;
+        const isBooked = !slot.available && !slot.locked;
+        const isUnavailable = (isLockedByOther || isBooked) && !isUserLocked;
 
-        const isAvailable = slot.available && !slot.locked;
-        const isLocked = slot.locked && slot.available;
-
-        const isUserLocked =
-          userLockedSlot && slot.time.getTime() === userLockedSlot.getTime();
-
-        const isUnavailable = !isAvailable && !isUserLocked;
+        const formattedTime = format(toZonedTime(slot.time, "Africa/Johannesburg"), "HH:mm");
 
         return (
           <button
             key={slot.time.toISOString()}
-            onClick={() => (isAvailable || isUserLocked) && onSlotSelect(slot)}
-            disabled={!isAvailable && !isUserLocked}
+            onClick={() => (slot.available || isUserLocked) && onSlotSelect(slot)}
+            disabled={isUnavailable}
+            title={isLockedByOther ? "Being reserved by another user" : isBooked ? "Already booked" : undefined}
             className={cn(
-              "h-14 rounded-lg font-medium text-sm transition-all flex flex-col items-center justify-center gap-1",
-              isUnavailable
-                ? isLocked
-                  ? "bg-amber-100 text-amber-600 dark:text-amber-400"
-                  : "bg-muted100 cursor-not-allowed line-through dark:bg-muted800 dark:text-muted-600"
-                : isSelected || isUserLocked
-                  ? "bg-muted900 ring-2 ring-muted900 ring-offset-2 dark:bg-primary500 text-white dark:text-white"
-                  : "bg-primary50 border border-blue-200 hover:bg-primary100 hover:border-blue-400 dark:bg-muted800 dark:border-muted700 dark:hover:bg-muted700",
+              "h-12 rounded-xl text-sm font-semibold transition-all flex flex-col items-center justify-center gap-0.5",
+
+              // User's own reserved slot
+              isUserLocked && "bg-primary text-white ring-2 ring-primary ring-offset-2",
+
+              // Selected (not yet locked)
+              !isUserLocked && isSelected && "bg-primary text-white ring-2 ring-primary ring-offset-2",
+
+              // Available
+              !isUserLocked && !isSelected && slot.available && !slot.locked &&
+                "bg-card border border-border hover:border-primary hover:bg-primary/5 text-foreground cursor-pointer",
+
+              // Locked by another user — amber icon only
+              isLockedByOther && !isUserLocked &&
+                "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-500 cursor-not-allowed",
+
+              // Fully booked
+              isBooked &&
+                "bg-muted text-muted-foreground cursor-not-allowed opacity-50 line-through",
             )}
           >
             <span>{formattedTime}</span>
-            {isUnavailable && (
-              <span className="text-xs opacity-75 flex items-center gap-1">
-                {isLocked && <Lock className="h-3 w-3" />}
-                {isLocked && "Reserved"}
-              </span>
+            {isLockedByOther && !isUserLocked && (
+              <Lock className="h-3 w-3" />
             )}
             {isUserLocked && (
-              <span className="text-xs opacity-75 flex items-center gap-1">
-                <Lock className="h-3 w-3" />
-                Reserved
-              </span>
+              <Lock className="h-3 w-3 opacity-80" />
             )}
           </button>
         );

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building2, Loader2, Search, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { BranchCard } from '@/components/branch/branch-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -29,17 +29,10 @@ interface BranchesResponse {
 }
 
 async function fetchBranches(page: number, search: string): Promise<BranchesResponse> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    limit: '20',
-  });
-  if (search) {
-    params.set('search', search);
-  }
+  const params = new URLSearchParams({ page: page.toString(), limit: '20' });
+  if (search) params.set('search', search);
   const res = await fetch(`/api/branches?${params}`);
-  if (!res.ok) {
-    throw new Error('Failed to fetch branches');
-  }
+  if (!res.ok) throw new Error('Failed to fetch branches');
   return res.json();
 }
 
@@ -52,9 +45,7 @@ export default function BranchesPage() {
   const [page, setPage] = useState(() => Number(searchParams.get('page') ?? 1));
 
   useEffect(() => {
-    if (!sessionPending && !session) {
-      router.push('/login');
-    }
+    if (!sessionPending && !session) router.push('/login');
   }, [session, sessionPending, router]);
 
   useEffect(() => {
@@ -83,17 +74,13 @@ export default function BranchesPage() {
   });
 
   useEffect(() => {
-    if (isError) {
-      toast.error('Failed to load branches');
-    }
+    if (isError) toast.error('Failed to load branches');
   }, [isError, error]);
 
   if (sessionPending) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -102,15 +89,25 @@ export default function BranchesPage() {
   const pagination = data?.data?.pagination ?? null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Our Branches</h1>
-        <p className="text-muted-foreground dark:text-muted-foreground">
-          Select a branch to book an appointment
-        </p>
+    <div className="max-w-6xl mx-auto px-4 py-10">
+
+      {/* Header */}
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <MapPin className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">Branches</h1>
+            <p className="text-sm text-muted-foreground">
+              {pagination ? `${pagination.total} branches across South Africa` : 'Find your nearest branch'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+      {/* Search + count */}
+      <div className="mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -121,49 +118,46 @@ export default function BranchesPage() {
           />
         </div>
         {pagination && (
-          <>
-            <div className="sm:hidden text-xs text-muted-foreground500">
-              Page {pagination.page} of {pagination.totalPages}
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} branches
-            </div>
-          </>
+          <p className="text-sm text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.limit) + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+          </p>
         )}
       </div>
 
+      {/* Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-44 rounded-2xl bg-muted animate-pulse" />
+          ))}
         </div>
       ) : branches.length === 0 ? (
-        <div className="text-center py-12">
-          <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">No branches found</h3>
-          <p className="text-muted-foreground dark:text-muted-foreground">
+        <div className="text-center py-20 border border-dashed border-border rounded-2xl">
+          <Building2 className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+          <p className="font-medium">No branches found</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {search ? 'Try a different search term' : 'No branches available'}
           </p>
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pb-24">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pb-8">
             {branches.map(branch => (
               <BranchCard key={branch.id} branch={branch} />
             ))}
           </div>
 
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-between gap-2">
+            <div className="mt-4 flex items-center justify-between gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={!pagination.hasPrev || isLoading}
-                className="flex-1 sm:flex-none"
+                className="gap-1"
               >
-                <ChevronLeft className="h-4 w-4 mr-1 hidden sm:inline" />
-                <span className="sm:hidden">Prev</span>
-                <span className="hidden sm:inline">Previous</span>
+                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
 
               <div className="hidden sm:flex items-center gap-1">
@@ -178,15 +172,14 @@ export default function BranchesPage() {
                   } else {
                     pageNum = pagination.page - 2 + i;
                   }
-
                   return (
                     <Button
                       key={pageNum}
-                      variant={pageNum === pagination.page ? 'primary' : 'outline'}
+                      variant={pageNum === pagination.page ? 'primary' : 'ghost'}
                       size="sm"
                       onClick={() => setPage(pageNum)}
                       disabled={isLoading}
-                      className="w-10"
+                      className="w-9 h-9 p-0 rounded-lg"
                     >
                       {pageNum}
                     </Button>
@@ -194,16 +187,19 @@ export default function BranchesPage() {
                 })}
               </div>
 
+              <span className="sm:hidden text-sm text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => p + 1)}
                 disabled={!pagination.hasNext || isLoading}
-                className="flex-1 sm:flex-none"
+                className="gap-1"
               >
-                <span className="sm:hidden">Next</span>
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="h-4 w-4 ml-1 hidden sm:inline" />
+                Next
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           )}

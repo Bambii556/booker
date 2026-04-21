@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { ConfirmationCard } from "@/components/booking/confirmation-card";
 import { CancelAppointmentDialog } from "@/components/booking/cancel-appointment-dialog";
 import { Button } from "@/components/ui/button";
@@ -93,60 +94,42 @@ export default function ConfirmationPage() {
 
   if (sessionPending || loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error || !appointment) {
-    const isSlotTaken =
-      error?.includes("someone else") || error?.includes("just booked");
-    const isArchived = error?.includes("expired");
-
-    const title = isSlotTaken
+    const title = error?.includes("someone else") || error?.includes("just booked")
       ? "Slot Already Booked"
-      : isArchived
+      : error?.includes("expired")
         ? "Appointment Expired"
         : "Something Went Wrong";
 
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">{title}</h1>
-          <p className="text-muted-foreground600 dark:text-muted-foreground mb-6">
-            {error || "The appointment you are looking for does not exist."}
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/dashboard"
-              className="inline-flex items-center justify-center px-4 py-2 bg-muted100 dark:bg-muted800 text-muted-foreground900 dark:text-muted-foreground100 rounded-lg hover:bg-muted200 dark:hover:bg-muted700"
-            >
-              View Your Appointments
-            </a>
-            <a
-              href="/branches"
-              className="inline-flex items-center justify-center px-4 py-2 bg-muted900 text-white rounded-lg hover:bg-muted800"
-            >
-              Book New Appointment
-            </a>
-          </div>
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <p className="text-2xl font-bold mb-3">{title}</p>
+        <p className="text-muted-foreground mb-8">
+          {error || "The appointment you are looking for does not exist."}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button variant="outline" onClick={() => router.push("/dashboard")}>My Appointments</Button>
+          <Button onClick={() => router.push("/branches")}>Book New Appointment</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Booking Confirmation</h1>
-        <p className="text-muted-foreground600 dark:text-muted-foreground">
-          Your appointment details are below
-        </p>
-      </div>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to dashboard
+      </Link>
 
       <ConfirmationCard
         bookingReference={appointment.bookingReference}
@@ -160,7 +143,7 @@ export default function ConfirmationPage() {
       />
 
       {appointment.status === "confirmed" && (
-        <div className="max-w-2xl mx-auto mt-6">
+        <div className="mt-4">
           <Button
             variant="destructive-outline"
             className="w-full"
