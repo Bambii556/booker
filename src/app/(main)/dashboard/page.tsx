@@ -69,7 +69,6 @@ export default function DashboardPage() {
   const {
     data: appointmentsData,
     isLoading,
-    refetch,
   } = useQuery({
     queryKey: ["appointments"],
     queryFn: fetchAppointments,

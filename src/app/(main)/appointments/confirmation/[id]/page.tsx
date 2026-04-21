@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Loader2, Clock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ConfirmationCard } from "@/components/booking/confirmation-card";
 import { CancelAppointmentDialog } from "@/components/booking/cancel-appointment-dialog";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { toast } from "sonner";
 
 interface Appointment {
@@ -22,44 +21,6 @@ interface Appointment {
   };
 }
 
-interface AlternativeSlot {
-  time: Date;
-  available: boolean;
-  isBooking?: boolean;
-}
-
-async function fetchAlternativeSlots(
-  branchId: string,
-  date: string,
-): Promise<AlternativeSlot[]> {
-  const res = await fetch(`/api/branches/${branchId}/slots?date=${date}`);
-  const data = await res.json();
-  if (!res.ok) return [];
-  return data.data.slots
-    .filter((s: { available: boolean }) => s.available)
-    .slice(0, 3)
-    .map((s: { time: string }) => ({
-      time: new Date(s.time),
-      available: true,
-    }));
-}
-
-async function bookAlternativeSlot(
-  branchId: string,
-  time: Date,
-): Promise<{ id: string } | null> {
-  const res = await fetch("/api/appointments", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      branchId,
-      scheduledAt: time.toISOString(),
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) return null;
-  return data.data;
-}
 
 export default function ConfirmationPage() {
   const params = useParams();
@@ -68,10 +29,6 @@ export default function ConfirmationPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [alternativeSlots, setAlternativeSlots] = useState<AlternativeSlot[]>(
-    [],
-  );
-  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -103,50 +60,6 @@ export default function ConfirmationPage() {
     }
   };
 
-  const loadAlternativeSlots = async () => {
-    if (!appointment?.branch?.id) return;
-    setLoadingAlternatives(true);
-    try {
-      const dateStr = format(appointment.scheduledAt, "yyyy-MM-dd");
-      const slots = await fetchAlternativeSlots(appointment.branch.id, dateStr);
-      setAlternativeSlots(slots);
-    } catch {
-      setAlternativeSlots([]);
-    } finally {
-      setLoadingAlternatives(false);
-    }
-  };
-
-  const handleBookAlternative = async (slot: AlternativeSlot) => {
-    if (!appointment?.branch?.id) return;
-
-    setAlternativeSlots((prev) =>
-      prev.map((s) =>
-        s.time.getTime() === slot.time.getTime()
-          ? { ...s, isBooking: true }
-          : s,
-      ),
-    );
-
-    const result = await bookAlternativeSlot(appointment.branch.id, slot.time);
-
-    if (result) {
-      toast.success("Appointment booked!", {
-        description: "Redirecting to confirmation...",
-      });
-      router.push(`/appointments/confirmation/${result.id}`);
-    } else {
-      toast.error("Failed to book. Please try another time.");
-      setAlternativeSlots((prev) =>
-        prev.map((s) =>
-          s.time.getTime() === slot.time.getTime()
-            ? { ...s, isBooking: false }
-            : s,
-        ),
-      );
-    }
-  };
-
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -174,7 +87,7 @@ export default function ConfirmationPage() {
     if (session) {
       fetchAppointment();
     }
-  }, [session]);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (sessionPending || loading) {
     return (
@@ -204,42 +117,6 @@ export default function ConfirmationPage() {
           <p className="text-muted-foreground600 dark:text-muted-foreground mb-6">
             {error || "The appointment you are looking for does not exist."}
           </p>
-
-          {isSlotTaken && (
-            <div className="mb-8">
-              <p className="text-muted-foreground600 dark:text-muted-foreground mb-4">
-                Here are some other available times for the same day:
-              </p>
-              {loadingAlternatives ? (
-                <div className="flex justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : alternativeSlots.length > 0 ? (
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {alternativeSlots.map((slot, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      onClick={() => handleBookAlternative(slot)}
-                      disabled={slot.isBooking}
-                      className="gap-2"
-                    >
-                      {slot.isBooking ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Clock className="h-4 w-4" />
-                      )}
-                      {format(slot.time, "HH:mm")}
-                    </Button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground500 dark:text-muted-foreground">
-                  No other times available today.
-                </p>
-              )}
-            </div>
-          )}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a

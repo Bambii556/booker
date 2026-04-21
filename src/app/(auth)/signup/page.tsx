@@ -59,7 +59,7 @@ export default function SignupPage() {
         router.push('/dashboard');
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       toast.error('Something went wrong', {
         description: 'Please try again later',
       });

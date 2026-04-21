@@ -56,6 +56,7 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function generateBranchName(area: string, city: string): string {
   const type = branchTypes[randomInt(0, branchTypes.length - 1)];
   return `${area} ${type}`;

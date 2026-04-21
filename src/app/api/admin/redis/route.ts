@@ -7,7 +7,7 @@ export async function GET() {
   const keys: RedisKey[] = [];
     
     const cursor = "0";
-    const [nextCursor, batch] = await redis.scan(cursor, "MATCH", "*", "COUNT", 100);
+    const [, batch] = await redis.scan(cursor, "MATCH", "*", "COUNT", 100);
     
     for (const key of batch) {
       const type = await redis.type(key);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from '@/app/api/branches/route';
 import { db } from '@/lib/db';
+import type { Branch } from '@/lib/db/schema';
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -28,12 +29,12 @@ describe('GET /api/branches', () => {
       { id: '2', name: 'Cape Town CBD', address: '45 Main Street', openingTime: '08:30:00', closingTime: '16:30:00', timezone: 'Africa/Johannesburg', createdAt: new Date() },
     ];
 
-    vi.mocked(db.query.branches.findMany).mockResolvedValue(mockBranches as any);
+    vi.mocked(db.query.branches.findMany).mockResolvedValue(mockBranches as Branch[]);
     vi.mocked(db.select).mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ count: 2 }]),
       }),
-    } as any);
+    } as ReturnType<typeof db.select>);
 
     const request = new Request('http://localhost/api/branches');
     const response = await GET(request);
@@ -51,7 +52,7 @@ describe('GET /api/branches', () => {
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ count: 0 }]),
       }),
-    } as any);
+    } as ReturnType<typeof db.select>);
 
     const request = new Request('http://localhost/api/branches');
     const response = await GET(request);
@@ -68,7 +69,7 @@ describe('GET /api/branches', () => {
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ count: 0 }]),
       }),
-    } as any);
+    } as ReturnType<typeof db.select>);
 
     const request = new Request('http://localhost/api/branches?search=Sandton');
     const response = await GET(request);

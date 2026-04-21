@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { Calendar, LayoutDashboard, Building2, Shield } from "lucide-react";
+import { Calendar, LayoutDashboard, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserDropdown } from "@/components/ui/user-dropdown";
 

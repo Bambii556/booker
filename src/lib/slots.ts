@@ -1,4 +1,4 @@
-import { format, parse, addMinutes, startOfDay, setHours, setMinutes, isSameDay } from 'date-fns';
+import { format, addMinutes, startOfDay, setHours, setMinutes } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import type { Slot, BranchWithAvailability } from '@/types';
 

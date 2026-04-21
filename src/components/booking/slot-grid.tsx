@@ -55,7 +55,6 @@ export function SlotGrid({
 
         const isAvailable = slot.available && !slot.locked;
         const isLocked = slot.locked && slot.available;
-        const isTaken = !slot.available && !slot.locked;
 
         const isUserLocked =
           userLockedSlot && slot.time.getTime() === userLockedSlot.getTime();

@@ -20,7 +20,6 @@ export function DatePicker({
   maxDaysAhead = 30,
 }: DatePickerProps) {
   const today = new Date();
-  const minDay = startOfMonth(minDate);
   const maxDate = addDays(minDate, maxDaysAhead);
   
   const [viewMonth, setViewMonth] = useState(startOfMonth(today));

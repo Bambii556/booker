@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import {
@@ -62,9 +63,11 @@ export default function ProfilePage() {
         <div className="flex items-end gap-5 mb-8">
           <div className="w-20 h-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-background flex-shrink-0">
             {user.image ? (
-              <img
+              <Image
                 src={user.image}
                 alt={user.name || "User"}
+                width={80}
+                height={80}
                 className="w-20 h-20 rounded-2xl object-cover"
               />
             ) : (

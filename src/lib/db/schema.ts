@@ -5,7 +5,6 @@ import {
   timestamp,
   index,
   uniqueIndex,
-  boolean,
   uuid,
 } from "drizzle-orm/pg-core";
 import * as t from "drizzle-orm/pg-core";

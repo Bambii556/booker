@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { branches } from '@/lib/db/schema';
-import { asc, ilike, or, count, sql } from 'drizzle-orm';
+import { asc, ilike, or, count } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {

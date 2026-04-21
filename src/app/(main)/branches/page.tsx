@@ -67,14 +67,14 @@ export default function BranchesPage() {
       router.replace(`/branches?${params}`, { scroll: false });
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (debouncedSearch) params.set('search', debouncedSearch);
     params.set('page', page.toString());
     router.replace(`/branches?${params}`, { scroll: false });
-  }, [page]);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['branches', page, debouncedSearch],

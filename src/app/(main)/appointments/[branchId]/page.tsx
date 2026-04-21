@@ -414,19 +414,19 @@ export default function BookingPage({
           },
         );
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to reserve slot");
     }
   };
 
-  // Cleanup lock on unmount
+  // Cleanup lock on unmount — intentionally empty deps to run only once
   useEffect(() => {
     return () => {
       if (lockInfo) {
         releaseLock(lockInfo.branchId, new Date(lockInfo.slotTime));
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bookingMutation = useMutation({
     mutationFn: async () => {

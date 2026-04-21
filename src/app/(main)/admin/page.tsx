@@ -7,7 +7,6 @@ import {
   RefreshCw,
   AlertCircle,
   Database,
-  Activity,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -154,8 +153,6 @@ export default function AdminPage() {
   const isLoading = activeTab === "redis" ? redisLoading : locksLoading;
   const isRefetching = activeTab === "redis" ? redisRefetching : locksRefetching;
   const error = activeTab === "redis" ? redisError : locksError;
-  const dataLength = activeTab === "redis" ? redisKeys.length : locks.length;
-
   const refetch = activeTab === "redis" ? refetchRedis : refetchLocks;
 
   return (
