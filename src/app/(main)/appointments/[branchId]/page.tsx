@@ -563,7 +563,12 @@ export default function BookingPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
+          {loadingSlots && (
+            <div className="h-1 w-full bg-muted overflow-hidden">
+              <div className="h-full w-1/2 bg-primary rounded-full animate-[loading-bar_1s_ease-in-out_infinite]" />
+            </div>
+          )}
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />

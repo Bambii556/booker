@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
   :root {
     --background: #FFFFFF;
     --foreground: #020817;
@@ -62,14 +66,18 @@
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
-* {
-  border-color: var(--border);
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+  }
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }
 
 [data-close-button] {

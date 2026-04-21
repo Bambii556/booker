@@ -9,7 +9,7 @@ function Card({ className = "", hoverable = false, ...props }: CardProps) {
     <div
       className={`
         rounded-xl border border-border bg-card text-card-foreground shadow-sm
-        ${hoverable ? "transition-shadow hover:shadow-md hover:border-primary/30 dark:hover:border-primary/30" : ""}
+        ${hoverable ? "transition-all hover:shadow-md hover:border-primary" : ""}
         ${className}
       `}
       {...props}
