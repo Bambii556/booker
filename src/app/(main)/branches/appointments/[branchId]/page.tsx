@@ -449,7 +449,7 @@ export default function BookingPage({
       toast.success("Appointment booked!", {
         description: "Redirecting to confirmation...",
       });
-      router.push(`/appointments/confirmation/${data.data.id}`);
+      router.push(`/appointments/${data.data.id}`);
     },
     onError: (error: Error) => {
       if (error.message === "SLOT_TAKEN") {

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { appointments, branches } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { sendEmail } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 import { fromZonedTime } from 'date-fns-tz';
 import { BookAppointmentSchema } from '@/lib/validations';
@@ -96,6 +97,19 @@ export async function POST(request: NextRequest) {
       bookingReference,
       status: 'confirmed',
     }).returning();
+
+    await sendEmail({
+      userId: session.user.id,
+      to: session.user.email,
+      subject: `Appointment Confirmed – ${bookingReference}`,
+      type: 'booking_confirmation',
+      data: {
+        bookingReference,
+        branchName: branch.name,
+        branchAddress: branch.address,
+        scheduledAt: scheduledAtUTC,
+      },
+    });
 
     return NextResponse.json({ success: true, data: result[0] }, { status: 201 });
   } catch (error: unknown) {

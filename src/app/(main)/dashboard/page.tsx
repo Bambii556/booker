@@ -101,7 +101,11 @@ export default function DashboardPage() {
       if (data.success) {
         toast.success("Appointment cancelled");
         setAppointments((prev) =>
-          prev.filter((apt) => apt.id !== appointmentToDelete),
+          prev.map((apt) =>
+            apt.id === appointmentToDelete
+              ? { ...apt, status: "cancelled" as const }
+              : apt,
+          ),
         );
       } else {
         toast.error(data.message || "Failed to cancel appointment");
@@ -208,7 +212,7 @@ export default function DashboardPage() {
                     onCancel={() => handleCancelClick(apt.id)}
                     isCancelling={cancellingId === apt.id}
                     onView={() =>
-                      router.push(`/appointments/confirmation/${apt.id}`)
+                      router.push(`/appointments/${apt.id}`)
                     }
                   />
                 ))}
@@ -229,7 +233,7 @@ export default function DashboardPage() {
                     onCancel={() => {}}
                     isCancelling={false}
                     onView={() =>
-                      router.push(`/appointments/confirmation/${apt.id}`)
+                      router.push(`/appointments/${apt.id}`)
                     }
                   />
                 ))}

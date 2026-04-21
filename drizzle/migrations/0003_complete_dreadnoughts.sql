@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" RENAME COLUMN "archived_at" TO "updated_at";

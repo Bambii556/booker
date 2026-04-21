@@ -21,9 +21,9 @@ export function TableBody({ children, className = "" }: { children: React.ReactN
   return <tbody className={className}>{children}</tbody>;
 }
 
-export function TableRow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+export function TableRow({ children, className = "", onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <tr className={`border-b border-border transition-colors hover:bg-muted ${className}`}>
+    <tr onClick={onClick} className={`border-b border-border transition-colors hover:bg-muted ${className}`}>
       {children}
     </tr>
   );

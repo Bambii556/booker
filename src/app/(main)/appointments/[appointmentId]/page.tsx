@@ -13,6 +13,7 @@ interface Appointment {
   id: string;
   bookingReference: string;
   scheduledAt: Date;
+  updatedAt: Date | null;
   status: "pending" | "confirmed" | "cancelled" | "archived";
   branch: {
     id: string;
@@ -32,7 +33,7 @@ export default function ConfirmationPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const appointmentId = params.id as string;
+  const appointmentId = params.appointmentId as string;
 
   useEffect(() => {
     if (!sessionPending && !session) {
@@ -49,6 +50,7 @@ export default function ConfirmationPage() {
         setAppointment({
           ...data.data,
           scheduledAt: new Date(data.data.scheduledAt),
+          updatedAt: data.data.updatedAt ? new Date(data.data.updatedAt) : null,
         });
       } else {
         setError(data.message || "Failed to load appointment");
@@ -151,12 +153,13 @@ export default function ConfirmationPage() {
         branchName={appointment.branch.name}
         branchAddress={appointment.branch.address}
         scheduledAt={appointment.scheduledAt}
+        updatedAt={appointment.updatedAt}
         status={appointment.status}
         userEmail={session?.user?.email || ""}
         isProcessing={false}
       />
 
-      {(appointment.status === "confirmed" || appointment.status === "pending") && (
+      {appointment.status === "confirmed" && (
         <div className="max-w-2xl mx-auto mt-6">
           <Button
             variant="destructive-outline"

@@ -8,7 +8,8 @@ A production-ready appointment scheduling application for bank branches across S
 - **Branch Network**: 880+ bank branches across South Africa
 - **Smart Scheduling**: 30-minute appointment slots, weekdays only (08:00-17:00)
 - **Race Condition Handling**: Database-level unique constraints prevent double-booking
-- **Real-time Availability**: Slots become available immediately after cancellation
+- **Real-time Availability**: Slots become available immediately after cancellation (soft-delete preserves audit trail)
+- **Simulated Email Notifications**: HTML email confirmations and cancellation notices stored in user inbox
 - **Toast Notifications**: User-friendly feedback for all actions
 - **Responsive Design**: Works on mobile and desktop
 - **Background Jobs**: Automatic cleanup of old appointments using pg-boss
@@ -162,8 +163,20 @@ docker-compose up -d
 | user_id           | text      | FK to users                              |
 | scheduled_at      | timestamp | Appointment time (UTC)                   |
 | status            | text      | confirmed/cancelled/archived             |
-| archived_at       | timestamp | When the appointment was archived        |
+| updated_at        | timestamp | Set when cancelled or archived           |
 | created_at        | timestamp | Creation timestamp                       |
+
+### notifications
+
+| Column     | Type      | Description                                  |
+| ---------- | --------- | -------------------------------------------- |
+| id         | uuid      | Primary key                                  |
+| user_id    | text      | FK to users                                  |
+| type       | text      | booking_confirmation / booking_cancellation  |
+| subject    | text      | Email subject line                           |
+| body       | text      | Full HTML email body                         |
+| read       | boolean   | Whether the user has opened the notification |
+| created_at | timestamp | When the notification was created            |
 
 ### Race Condition Handling
 
@@ -250,8 +263,14 @@ This approach:
             │ - Returns     │    │ - Slot was just     │
             │ appointment   │    │   booked            │
             │ details       │    │ - User must         │
-            └───────────────┘    │   refresh           │
-                                 └─────────────────────┘
+            └───────┬───────┘    │   refresh           │
+                    │            └─────────────────────┘
+                    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 8. Simulated confirmation email written to notifications table        │
+│    - HTML email stored as notification record                         │
+│    - Visible in user inbox under Profile → Notifications              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Cancellation Flow
@@ -276,15 +295,28 @@ This approach:
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 3. Server deletes appointment                                        │
-│    DELETE FROM appointments WHERE id = ?;                            │
+│ 3. Server soft-deletes the appointment                               │
+│    UPDATE appointments                                               │
+│    SET status = 'cancelled', updated_at = now()                      │
+│    WHERE id = ?;                                                     │
+│                                                                      │
+│    Row is retained for audit — partial unique index only enforces    │
+│    uniqueness on status = 'confirmed', so the slot is freed          │
+│    immediately without deleting the record.                          │
 └──────────────────────────────────────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 4. Slot is IMMEDIATELY available for other users                     │
-│    - No extra processing needed                                      │
+│ 4. Simulated cancellation email written to notifications table       │
+│    - HTML email stored as notification record                        │
+│    - Visible in user inbox under Profile → Notifications             │
+└──────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 5. Slot is IMMEDIATELY available for other users                     │
 │    - Partial unique index automatically frees the slot               │
+│    - Cancelled record preserved in appointments table                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -298,7 +330,9 @@ This approach:
 | GET    | /api/appointments                        | User's appointments                |
 | POST   | /api/appointments                        | Book an appointment (confirmed)    |
 | GET    | /api/appointments/[id]                   | Get appointment details            |
-| DELETE | /api/appointments/[id]                   | Cancel an appointment              |
+| DELETE | /api/appointments/[id]                   | Cancel appointment (soft-delete)   |
+| GET    | /api/notifications                       | User's notifications (inbox)       |
+| PATCH  | /api/notifications/[id]                  | Mark notification as read          |
 | GET    | /api/health                              | Health check                       |
 | POST   | /api/locks                               | Acquire a Redis lock on a slot     |
 | DELETE | /api/locks                               | Release a Redis lock               |
@@ -312,38 +346,46 @@ This approach:
 src/
 ├── app/
 │   ├── api/
-│   │   ├── admin/          # Admin endpoints (locks, redis)
-│   │   ├── auth/           # Better Auth endpoints
-│   │   ├── branches/       # Branch listing & slot queries
-│   │   ├── appointments/   # Booking CRUD + confirm
-│   │   ├── health/         # Health check
-│   │   └── locks/          # Distributed lock API
-│   ├── (auth)/             # Login, signup pages
-│   └── (main)/             # Protected pages (dashboard, booking, profile, admin)
+│   │   ├── admin/              # Admin endpoints (locks, redis)
+│   │   ├── auth/               # Better Auth endpoints
+│   │   ├── branches/           # Branch listing & slot queries
+│   │   ├── appointments/       # Booking CRUD
+│   │   ├── notifications/      # User inbox (read/mark-read)
+│   │   ├── health/             # Health check
+│   │   └── locks/              # Distributed lock API
+│   ├── (auth)/                 # Login, signup pages
+│   └── (main)/
+│       ├── appointments/[appointmentId]/  # Appointment detail page
+│       ├── branches/
+│       │   └── appointments/[branchId]/  # Booking page
+│       ├── dashboard/          # Upcoming & past appointments
+│       ├── profile/            # Profile, inbox, security, privacy
+│       └── admin/              # Admin tooling
 ├── components/
-│   ├── ui/                 # Reusable UI (buttons, inputs, cards)
-│   ├── booking/            # Slot picker, booking form, confirmation
-│   ├── branch/             # Branch card, branch list
-│   └── providers/          # TanStack Query provider
+│   ├── ui/                     # Reusable UI (buttons, inputs, cards, table, dialog)
+│   ├── booking/                # Slot picker, booking modal, confirmation card
+│   ├── branch/                 # Branch card, branch list
+│   └── providers/              # TanStack Query provider
 ├── lib/
 │   ├── db/
-│   │   ├── schema.ts       # Drizzle schema
-│   │   ├── index.ts        # DB connection
-│   │   └── migrate.ts      # Migration runner
-│   ├── auth.ts             # Better Auth config
-│   ├── auth-client.ts      # Better Auth browser client
-│   ├── slots.ts            # Slot generation logic
-│   ├── locks.ts            # Redis distributed locks
-│   ├── redis.ts            # Redis client
-│   ├── pgboss.ts           # Background queue client
-│   ├── api-error.ts        # Standardised API error helpers
-│   └── validations.ts      # Zod validation schemas
+│   │   ├── schema.ts           # Drizzle schema
+│   │   ├── index.ts            # DB connection
+│   │   └── migrate.ts          # Migration runner
+│   ├── auth.ts                 # Better Auth config
+│   ├── auth-client.ts          # Better Auth browser client
+│   ├── slots.ts                # Slot generation logic
+│   ├── locks.ts                # Redis distributed locks
+│   ├── redis.ts                # Redis client
+│   ├── pgboss.ts               # Background queue client
+│   ├── notifications.ts        # Simulated email (HTML templates → DB)
+│   ├── api-error.ts            # Standardised API error helpers
+│   └── validations.ts          # Zod validation schemas
 ├── jobs/
-│   ├── index.ts            # Job worker entry
-│   └── cleanup-appointments.ts  # Archive old appointments
+│   ├── index.ts                # Job worker entry
+│   └── cleanup-appointments.ts # Archives old appointments
 ├── types/
-│   └── index.ts            # TypeScript interfaces
-└── proxy.ts                # Reverse proxy helper
+│   └── index.ts                # TypeScript interfaces
+└── proxy.ts                    # Reverse proxy helper
 ```
 
 ## Available Scripts

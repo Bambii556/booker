@@ -15,6 +15,20 @@
       "when": 1776426082859,
       "tag": "0001_condemned_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776773950067,
+      "tag": "0002_black_toad",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776775261579,
+      "tag": "0003_complete_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

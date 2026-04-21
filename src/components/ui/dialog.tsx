@@ -49,7 +49,7 @@ interface DialogContentProps {
 export function DialogContent({ children, className = "" }: DialogContentProps) {
   return (
     <div
-      className={`relative z-50 w-full max-w-md rounded-lg bg-card p-6 shadow-lg ${className}`}
+      className={`relative z-50 w-full rounded-lg bg-card p-6 shadow-lg ${className}`}
     >
       {children}
     </div>

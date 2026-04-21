@@ -116,7 +116,7 @@ export const appointments = pgTable(
     userId: text("user_id").notNull(),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
     status: text("status").notNull().default("pending"),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -162,6 +162,28 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
     references: [branches.id],
   }),
 }));
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  read: t.boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(user, {
+    fields: [notifications.userId],
+    references: [user.id],
+  }),
+}));
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
 
 export type Branch = typeof branches.$inferSelect;
 export type NewBranch = typeof branches.$inferInsert;

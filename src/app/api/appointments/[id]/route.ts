@@ -8,6 +8,7 @@ import {
   notFoundError,
   internalError,
 } from "@/lib/api-error";
+import { sendEmail } from "@/lib/notifications";
 
 export async function GET(
   request: NextRequest,
@@ -35,21 +36,8 @@ export async function GET(
     });
 
     if (!appointment) {
-      // Check if appointment exists at all (for debugging)
-      const anyAppointment = await db.query.appointments.findFirst({
-        where: eq(appointments.id, id),
-      });
-      if (anyAppointment) {
-        console.log(
-          "Appointment exists but user mismatch:",
-          anyAppointment.userId,
-        );
-        return notFoundError("Appointment not found");
-      }
       return notFoundError("Appointment not found");
     }
-
-    console.log("Found appointment:", appointment.id);
 
     return NextResponse.json({ success: true, data: appointment });
   } catch (error) {
@@ -78,15 +66,32 @@ export async function DELETE(
         eq(appointments.id, id),
         eq(appointments.userId, session.user.id),
       ),
+      with: { branch: true },
     });
 
     if (!appointment) {
       return notFoundError("Appointment not found");
     }
 
-    await db.delete(appointments).where(eq(appointments.id, id));
+    await db
+      .update(appointments)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(appointments.id, id));
 
-    return NextResponse.json({ success: true, message: "Appointment deleted" });
+    await sendEmail({
+      userId: session.user.id,
+      to: session.user.email,
+      subject: `Appointment Cancelled – ${appointment.bookingReference}`,
+      type: 'booking_cancellation',
+      data: {
+        bookingReference: appointment.bookingReference,
+        branchName: appointment.branch.name,
+        branchAddress: appointment.branch.address,
+        scheduledAt: appointment.scheduledAt,
+      },
+    });
+
+    return NextResponse.json({ success: true, message: "Appointment cancelled" });
   } catch (error) {
     console.error("Error cancelling appointment:", error);
     return internalError("Failed to cancel appointment", error);

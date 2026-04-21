@@ -12,7 +12,7 @@ export async function cleanupOldAppointments() {
     .update(appointments)
     .set({
       status: 'archived',
-      archivedAt: new Date(),
+      updatedAt: new Date(),
     })
     .where(
       and(

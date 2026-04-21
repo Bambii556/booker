@@ -2,7 +2,7 @@
 
 import { format, addMinutes } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { MapPin, Calendar, Clock, Check, Loader2, Mail, MessageSquare, Download } from 'lucide-react';
+import { MapPin, Calendar, Clock, Check, X, Loader2, Mail, MessageSquare, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +11,7 @@ interface ConfirmationCardProps {
   branchName: string;
   branchAddress: string;
   scheduledAt: Date;
+  updatedAt?: Date | null;
   status: 'pending' | 'confirmed' | 'cancelled' | 'archived';
   userEmail: string;
   isProcessing: boolean;
@@ -21,6 +22,7 @@ export function ConfirmationCard({
   branchName,
   branchAddress,
   scheduledAt,
+  updatedAt,
   status,
   userEmail,
   isProcessing,
@@ -65,6 +67,8 @@ END:VCALENDAR`;
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : status === 'confirmed' ? (
             <Check className="h-8 w-8 text-green-600" />
+          ) : status === 'cancelled' || status === 'archived' ? (
+            <X className="h-8 w-8 text-red-500" />
           ) : (
             <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
           )}
@@ -74,7 +78,11 @@ END:VCALENDAR`;
             ? 'Processing Your Booking...'
             : status === 'confirmed'
               ? 'Appointment Confirmed!'
-              : 'Booking Pending'}
+              : status === 'cancelled'
+                ? 'Appointment Cancelled'
+                : status === 'archived'
+                  ? 'Appointment Expired'
+                  : 'Booking Pending'}
         </CardTitle>
         <p className="text-sm text-muted-foreground font-mono mt-2">
           Reference: {bookingReference}
@@ -104,15 +112,20 @@ END:VCALENDAR`;
           </div>
         </div>
 
-        {status === 'pending' && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <p className="font-medium">Confirming your appointment...</p>
+        {(status === 'cancelled' || status === 'archived') && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-1">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <X className="h-5 w-5 shrink-0" />
+              <p className="font-medium">
+                {status === 'cancelled' ? 'This appointment has been cancelled.' : 'This appointment has expired.'}
+              </p>
             </div>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-              This usually takes a few seconds. Please don&apos;t close this page.
-            </p>
+            {updatedAt && (
+              <p className="text-sm text-red-700 dark:text-red-300 pl-7">
+                {status === 'cancelled' ? 'Cancelled' : 'Expired'} on{' '}
+                {format(toZonedTime(updatedAt, 'Africa/Johannesburg'), 'EEEE, MMMM d, yyyy \'at\' HH:mm')}
+              </p>
+            )}
           </div>
         )}
 
@@ -130,9 +143,9 @@ END:VCALENDAR`;
           </div>
         )}
 
-        <div className="border-t border-muted200 dark:border-muted800 pt-4">
+        {status === 'confirmed' && <div className="border-t border-muted200 dark:border-muted800 pt-4">
           <h4 className="font-medium mb-3 text-sm text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
-            Notifications Sent
+            Notifications
           </h4>
           <div className="space-y-2">
             <div className="flex items-center gap-3 text-sm">
@@ -148,7 +161,7 @@ END:VCALENDAR`;
               </span>
             </div>
           </div>
-        </div>
+        </div>}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button

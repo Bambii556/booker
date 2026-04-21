@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   User,
   Mail,
@@ -12,7 +14,28 @@ import {
   Lock,
   CheckCircle2,
   ChevronRight,
+  Loader2,
+  Inbox,
+  CalendarCheck,
+  CalendarX,
+  X,
 } from "lucide-react";
+import type { Notification } from "@/lib/db/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 type Tab = "profile" | "notifications" | "security" | "privacy";
 
@@ -56,12 +79,12 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero banner */}
-      <div className="w-full h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-b border-border" />
+      <div className="w-full h-32 bg-linear-to-r from-primary/20 via-primary/10 to-transparent border-b border-border" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
         {/* Avatar row */}
         <div className="flex items-end gap-5 mb-8">
-          <div className="w-20 h-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-background flex-shrink-0">
+          <div className="w-20 h-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shadow-lg ring-4 ring-background shrink-0">
             {user.image ? (
               <Image
                 src={user.image}
@@ -86,7 +109,7 @@ export default function ProfilePage() {
 
         <div className="flex flex-col lg:flex-row gap-6 pb-16">
           {/* Sidebar nav — horizontal scroll on mobile, vertical on desktop */}
-          <nav className="lg:w-56 flex-shrink-0">
+          <nav className="lg:w-56 shrink-0">
             <div className="flex lg:flex-col gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-visible pb-1 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
               {tabs.map(({ id, label, icon: Icon }) => {
                 const active = activeTab === id;
@@ -94,13 +117,13 @@ export default function ProfilePage() {
                   <button
                     key={id}
                     onClick={() => handleTabChange(id)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 lg:flex-shrink lg:w-full ${
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 lg:shrink lg:w-full ${
                       active
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <Icon className="h-4 w-4 shrink-0" />
                     {label}
                     {active && (
                       <ChevronRight className="h-4 w-4 ml-auto hidden lg:block" />
@@ -167,24 +190,8 @@ function SettingRow({
           <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
         )}
       </div>
-      <div className="flex-shrink-0">{action}</div>
+      <div className="shrink-0">{action}</div>
     </div>
-  );
-}
-
-function Toggle({ enabled = false }: { enabled?: boolean }) {
-  const [on, setOn] = useState(enabled);
-  return (
-    <input
-      type="checkbox"
-      checked={on}
-      onChange={() => setOn(!on)}
-      className="w-11 h-6 appearance-none rounded-full cursor-pointer transition-colors
-        bg-muted checked:bg-primary
-        relative before:absolute before:top-1 before:left-1 before:w-4 before:h-4
-        before:rounded-full before:bg-white before:shadow before:transition-transform
-        checked:before:translate-x-5"
-    />
   );
 }
 
@@ -202,14 +209,14 @@ function ProfileTab({ user }: { user: { name?: string | null; email?: string; im
       <SectionCard title="Personal Information" description="Your account details">
         <div className="space-y-0 divide-y divide-border -my-1">
           <div className="flex items-center gap-3 py-4">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Full name</p>
               <p className="font-medium text-sm truncate">{user.name || "—"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 py-4">
-            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Email address</p>
               <p className="font-medium text-sm truncate">{user.email}</p>
@@ -220,7 +227,7 @@ function ProfileTab({ user }: { user: { name?: string | null; email?: string; im
 
       <SectionCard title="Account Status">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
             <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
           <div>
@@ -236,23 +243,145 @@ function ProfileTab({ user }: { user: { name?: string | null; email?: string; im
 }
 
 function NotificationsTab() {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Notification | null>(null);
+
+  const { data, isLoading } = useQuery<{ success: boolean; data: Notification[] }>({
+    queryKey: ['notifications'],
+    queryFn: () => fetch('/api/notifications').then((r) => r.json()),
+  });
+
+  const markRead = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/notifications/${id}`, { method: 'PATCH' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
+  const handleOpen = (n: Notification) => {
+    setSelected(n);
+    if (!n.read) markRead.mutate(n.id);
+  };
+
+  const notifications = data?.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (notifications.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-2xl px-6 py-16 text-center">
+        <Inbox className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+        <p className="font-medium text-sm">No notifications yet</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Booking confirmations and cancellations will appear here.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <SectionCard
-      title="Notifications"
-      description="Configure how you receive notifications"
-    >
-      <SettingRow
-        label="Email Notifications"
-        description="Receive email reminders for upcoming appointments"
-        action={<Toggle enabled />}
-      />
-      <SettingRow
-        label="SMS Notifications"
-        description="Receive SMS reminders 24 hours before appointments"
-        action={<Toggle />}
-        last
-      />
-    </SectionCard>
+    <>
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Inbox</h2>
+          {unreadCount > 0 && (
+            <Badge variant="blue">{unreadCount} unread</Badge>
+          )}
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8">{' '}</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead className="w-36">Type</TableHead>
+              <TableHead className="w-44">Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {notifications.map((n) => {
+              const isConfirmation = n.type === 'booking_confirmation';
+              const Icon = isConfirmation ? CalendarCheck : CalendarX;
+
+              return (
+                <TableRow
+                  key={n.id}
+                  className="cursor-pointer"
+                  onClick={() => handleOpen(n)}
+                >
+                  <TableCell>
+                    {!n.read && (
+                      <span className="block w-2 h-2 rounded-full bg-primary mx-auto" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`text-sm ${!n.read ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                      {n.subject}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                      isConfirmation
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {isConfirmation ? 'Confirmation' : 'Cancellation'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {format(new Date(n.createdAt), 'MMM d, yyyy · HH:mm')}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-w-3xl mx-4">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <DialogTitle>{selected?.subject}</DialogTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selected && format(new Date(selected.createdAt), 'EEEE, MMMM d, yyyy · HH:mm')}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelected(null)}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </DialogHeader>
+
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="bg-muted/40 px-4 py-2 border-b border-border flex items-center gap-2 text-xs text-muted-foreground">
+              <Mail className="h-3.5 w-3.5" />
+              Simulated email
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto">
+              <iframe
+                srcDoc={selected?.body}
+                className="w-full border-0"
+                style={{ height: '600px' }}
+                sandbox="allow-same-origin"
+                title="Email preview"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

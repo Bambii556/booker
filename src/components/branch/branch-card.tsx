@@ -13,7 +13,7 @@ export function BranchCard({ branch }: BranchCardProps) {
   return (
     <Card hoverable className="group relative flex items-stretch">
       <Link
-        href={`/appointments/${branch.id}`}
+        href={`/branches/appointments/${branch.id}`}
         className="absolute inset-0 z-10"
         aria-label={`Book appointment at ${branch.name}`}
       />
