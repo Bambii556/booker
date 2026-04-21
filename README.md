@@ -298,7 +298,6 @@ This approach:
 | GET    | /api/appointments                        | User's appointments                |
 | POST   | /api/appointments                        | Book an appointment (confirmed)    |
 | GET    | /api/appointments/[id]                   | Get appointment details            |
-| POST   | /api/appointments/[id]/confirm           | Confirm a pending appointment      |
 | DELETE | /api/appointments/[id]                   | Cancel an appointment              |
 | GET    | /api/health                              | Health check                       |
 | POST   | /api/locks                               | Acquire a Redis lock on a slot     |

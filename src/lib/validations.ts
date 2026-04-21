@@ -5,10 +5,6 @@ export const BookAppointmentSchema = z.object({
   scheduledAt: z.string().datetime({ message: 'Invalid date format' }),
 });
 
-export const AppointmentIdSchema = z.object({
-  id: z.string().uuid('Invalid appointment ID'),
-});
-
 export const BranchIdSchema = z.object({
   id: z.string().uuid('Invalid branch ID'),
 });

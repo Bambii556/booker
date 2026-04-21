@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { appointments, branches } from '@/lib/db/schema';
-import { eq, and, or, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { fromZonedTime } from 'date-fns-tz';
 import { BookAppointmentSchema } from '@/lib/validations';
@@ -79,10 +79,7 @@ export async function POST(request: NextRequest) {
       where: and(
         eq(appointments.branchId, branchId),
         eq(appointments.scheduledAt, scheduledAtUTC),
-        or(
-          eq(appointments.status, 'pending'),
-          eq(appointments.status, 'confirmed')
-        )
+        eq(appointments.status, 'confirmed')
       ),
     });
 
