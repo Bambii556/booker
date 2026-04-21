@@ -257,6 +257,11 @@ function NotificationsTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  const markAllRead = useMutation({
+    mutationFn: () => fetch('/api/notifications', { method: 'PATCH' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
   const handleOpen = (n: Notification) => {
     setSelected(n);
     if (!n.read) markRead.mutate(n.id);
@@ -289,9 +294,24 @@ function NotificationsTab() {
     <>
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="font-semibold text-foreground">Inbox</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-foreground">Inbox</h2>
+            {unreadCount > 0 && (
+              <Badge variant="blue">{unreadCount} unread</Badge>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <Badge variant="blue">{unreadCount} unread</Badge>
+            <button
+              onClick={() => markAllRead.mutate()}
+              disabled={markAllRead.isPending}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              {markAllRead.isPending
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <CheckCircle2 className="h-3.5 w-3.5" />
+              }
+              Mark all as read
+            </button>
           )}
         </div>
 
