@@ -26,7 +26,7 @@ describe('BranchCard', () => {
 
   it('renders opening hours', () => {
     render(<BranchCard branch={mockBranch} />);
-    expect(screen.getByText('08:00 - 17:00')).toBeInTheDocument();
+    expect(screen.getByText(/08:00\s*–\s*17:00/)).toBeInTheDocument();
   });
 
   it('has correct link to appointments page', () => {
