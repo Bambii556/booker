@@ -22,6 +22,7 @@ A production-ready appointment scheduling application for bank branches across S
 - **Cache/Locks**: Redis for distributed locking
 - **Queue**: pg-boss for background jobs
 - **Auth**: Better Auth
+- **Data Fetching**: TanStack Query v5
 - **Notifications**: Sonner
 
 ## Quick Start (Docker)
@@ -160,7 +161,8 @@ docker-compose up -d
 | branch_id         | uuid      | FK to branches                           |
 | user_id           | text      | FK to users                              |
 | scheduled_at      | timestamp | Appointment time (UTC)                   |
-| status            | text      | confirmed/archived                       |
+| status            | text      | confirmed/cancelled/archived             |
+| archived_at       | timestamp | When the appointment was archived        |
 | created_at        | timestamp | Creation timestamp                       |
 
 ### Race Condition Handling
@@ -211,23 +213,32 @@ This approach:
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 4. User selects time slot and clicks "Book Appointment"              │
+│ 4. User selects time slot                                            │
+│    POST /api/locks                                                   │
+│    { branchId, slotTime }                                            │
+│    → Acquires Redis lock (5-min TTL) to reserve the slot            │
+└──────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ 5. User submits booking form                                         │
 │    POST /api/appointments                                            │
 │    { branchId, scheduledAt }                                         │
 └──────────────────────────────────────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 5. Server validates:                                                 │
+│ 6. Server validates:                                                 │
 │    a) User is authenticated (Better Auth session)                    │
 │    b) Branch exists                                                  │
-│    c) Slot is still available (application-level check)              │
+│    c) Slot is not already confirmed (application-level check)        │
 └──────────────────────────────────────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 6. Server inserts appointment (with partial unique index)            │
+│ 7. Server inserts appointment with status = 'confirmed'              │
 │    INSERT INTO appointments (...) VALUES (...);                      │
+│    Redis lock is released after success                              │
 └──────────────────────────────────────────────────────────────────────┘
                                 │
                     ┌───────────┴───────────┐
@@ -238,7 +249,7 @@ This approach:
             │ (HTTP 201)    │    │ (HTTP 409)          │
             │ - Returns     │    │ - Slot was just     │
             │ appointment   │    │   booked            │
-            │ reference     │    │ - User must         │
+            │ details       │    │ - User must         │
             └───────────────┘    │   refresh           │
                                  └─────────────────────┘
 ```
@@ -279,15 +290,22 @@ This approach:
 
 ## API Endpoints
 
-| Method | Endpoint                                 | Description             |
-| ------ | ---------------------------------------- | ----------------------- |
-| GET    | /api/branches                            | List all branches       |
-| GET    | /api/branches/[id]                       | Get branch details      |
-| GET    | /api/branches/[id]/slots?date=YYYY-MM-DD | Get available slots     |
-| GET    | /api/appointments                        | User's appointments     |
-| POST   | /api/appointments                        | Book an appointment     |
-| GET    | /api/appointments/[id]                   | Get appointment details |
-| DELETE | /api/appointments/[id]                   | Cancel an appointment   |
+| Method | Endpoint                                 | Description                        |
+| ------ | ---------------------------------------- | ---------------------------------- |
+| GET    | /api/branches                            | List all branches                  |
+| GET    | /api/branches/[id]                       | Get branch details                 |
+| GET    | /api/branches/[id]/slots?date=YYYY-MM-DD | Get available slots                |
+| GET    | /api/appointments                        | User's appointments                |
+| POST   | /api/appointments                        | Book an appointment (confirmed)    |
+| GET    | /api/appointments/[id]                   | Get appointment details            |
+| POST   | /api/appointments/[id]/confirm           | Confirm a pending appointment      |
+| DELETE | /api/appointments/[id]                   | Cancel an appointment              |
+| GET    | /api/health                              | Health check                       |
+| POST   | /api/locks                               | Acquire a Redis lock on a slot     |
+| DELETE | /api/locks                               | Release a Redis lock               |
+| GET    | /api/locks/info                          | Get lock info for a slot           |
+| GET    | /api/admin/locks                         | Admin: list all locks              |
+| GET    | /api/admin/redis                         | Admin: Redis info                  |
 
 ## Project Structure
 
@@ -295,46 +313,75 @@ This approach:
 src/
 ├── app/
 │   ├── api/
+│   │   ├── admin/          # Admin endpoints (locks, redis)
 │   │   ├── auth/           # Better Auth endpoints
 │   │   ├── branches/       # Branch listing & slot queries
-│   │   ├── appointments/  # Booking CRUD
+│   │   ├── appointments/   # Booking CRUD + confirm
+│   │   ├── health/         # Health check
 │   │   └── locks/          # Distributed lock API
-│   ├── (auth)/            # Login, signup pages
-│   └── (main)/            # Protected pages (dashboard, booking)
+│   ├── (auth)/             # Login, signup pages
+│   └── (main)/             # Protected pages (dashboard, booking, profile, admin)
 ├── components/
-│   ├── ui/               # Reusable UI (buttons, inputs, cards)
-│   ├── booking/           # Slot picker, booking form
-│   └── branch/           # Branch card, branch list
+│   ├── ui/                 # Reusable UI (buttons, inputs, cards)
+│   ├── booking/            # Slot picker, booking form, confirmation
+│   ├── branch/             # Branch card, branch list
+│   └── providers/          # TanStack Query provider
 ├── lib/
 │   ├── db/
-│   │   ├── schema.ts      # Drizzle schema
-│   │   ├── index.ts       # DB connection
-│   │   └── migrate.ts     # Migration runner
-│   ├── auth.ts            # Better Auth config
-│   ├── slots.ts           # Slot generation logic
-│   ├── locks.ts           # Redis distributed locks
-│   ├── redis.ts           # Redis client
-│   └── pgboss.ts         # Background queue client
+│   │   ├── schema.ts       # Drizzle schema
+│   │   ├── index.ts        # DB connection
+│   │   └── migrate.ts      # Migration runner
+│   ├── auth.ts             # Better Auth config
+│   ├── auth-client.ts      # Better Auth browser client
+│   ├── slots.ts            # Slot generation logic
+│   ├── locks.ts            # Redis distributed locks
+│   ├── redis.ts            # Redis client
+│   ├── pgboss.ts           # Background queue client
+│   ├── api-error.ts        # Standardised API error helpers
+│   └── validations.ts      # Zod validation schemas
 ├── jobs/
-│   ├── index.ts          # Job worker entry
+│   ├── index.ts            # Job worker entry
 │   └── cleanup-appointments.ts  # Archive old appointments
-└── types/
-    └── index.ts         # TypeScript interfaces
+├── types/
+│   └── index.ts            # TypeScript interfaces
+└── proxy.ts                # Reverse proxy helper
 ```
 
 ## Available Scripts
 
-| Command              | Description              |
-| -------------------- | ------------------------ |
-| `npm run dev`        | Start development server |
-| `npm run build`      | Build for production     |
-| `npm run start`      | Start production server  |
-| `npm run lint`       | Run ESLint               |
-| `npm run db:push`    | Push schema to database  |
-| `npm run db:migrate` | Run migrations           |
-| `npm run db:seed`    | Seed the database        |
-| `npm run db:studio`  | Open Drizzle Studio      |
-| `npm run worker`     | Start background worker  |
+| Command                  | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `npm run dev`            | Start development server                         |
+| `npm run build`          | Build for production                             |
+| `npm run start`          | Start production server                          |
+| `npm run lint`           | Run ESLint                                       |
+| `npm run worker`         | Start background worker                          |
+| `npm run db:push`        | Push schema to database                          |
+| `npm run db:generate`    | Generate Drizzle migration files                 |
+| `npm run db:migrate`     | Run migrations                                   |
+| `npm run db:seed`        | Seed the database with 880+ branches             |
+| `npm run db:reset`       | Reset the database (destructive)                 |
+| `npm run db:studio`      | Open Drizzle Studio                              |
+| `npm run test`           | Run full test suite (spins up Docker, then down) |
+| `npm run test:watch`     | Run tests in watch mode                          |
+| `npm run test:up`        | Start test Docker containers                     |
+| `npm run test:down`      | Stop test Docker containers                      |
+| `npm run test:setup`     | Spin up containers and seed test database        |
+
+## Testing
+
+Tests run against a real PostgreSQL instance via Docker (no mocks):
+
+```bash
+# Run the full suite (starts containers, runs tests, stops containers)
+npm run test
+
+# Watch mode (keeps containers running)
+npm run test:up
+npm run test:watch
+```
+
+The test database runs on port 5435 (separate from the dev DB on 5433).
 
 ## Scalability Considerations
 
