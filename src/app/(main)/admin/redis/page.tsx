@@ -130,7 +130,7 @@ export default function AdminRedisPage() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Redis Key</DialogTitle>
             <DialogDescription>This action cannot be undone.</DialogDescription>

@@ -10,8 +10,12 @@ async function setupJob(job: typeof JOB_DEFINITIONS[number]) {
   await boss.schedule(job.name, job.schedule);
 
   await boss.work(job.name, async (jobs) => {
-    console.log(`[${job.name}] processing job:`, jobs[0]?.id);
-    await runJob(job, "scheduled");
+    const pgJob = jobs[0];
+    console.log(`[${job.name}] processing job:`, pgJob?.id);
+    const triggeredBy = (pgJob?.data as { triggeredBy?: string })?.triggeredBy === "manual"
+      ? "manual"
+      : "scheduled";
+    await runJob(job, triggeredBy);
   });
 
   console.log(`[${job.name}] registered — ${job.schedule}`);

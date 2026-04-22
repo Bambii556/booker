@@ -117,7 +117,7 @@ export default function AdminLocksPage() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Release Lock</DialogTitle>
             <DialogDescription>

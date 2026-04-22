@@ -74,7 +74,7 @@ export default function AdminJobsPage() {
       fetch(`/api/admin/jobs/${name}`, { method: "POST" }).then((r) => r.json()),
     onSuccess: (_, name) => {
       queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
-      toast.success(`Job triggered successfully`);
+      toast.success(`Job queued — worker will pick it up shortly`);
       console.log(`[admin] manually triggered job: ${name}`);
     },
     onError: () => toast.error("Job failed to run"),
