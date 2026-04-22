@@ -86,6 +86,7 @@ export default function DashboardPage() {
     queryKey: ["my-lock"],
     queryFn: fetchMyLock,
     enabled: !!session,
+    staleTime: 0,
     refetchInterval: 15000,
   });
 

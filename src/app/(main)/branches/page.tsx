@@ -4,12 +4,29 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Loader2, Search, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Building2, Loader2, Search, ChevronLeft, ChevronRight, MapPin, Timer } from 'lucide-react';
 import { BranchCard } from '@/components/branch/branch-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Branch } from '@/lib/db/schema';
 import { toast } from 'sonner';
+import { format, parseISO } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+
+interface ActiveLock {
+  locked: boolean;
+  branchId?: string;
+  branchName?: string;
+  branchAddress?: string;
+  slotTime?: string;
+  ttl?: number;
+}
+
+async function fetchMyLock(): Promise<{ success: boolean; data: ActiveLock }> {
+  const res = await fetch('/api/locks/mine');
+  if (!res.ok) return { success: false, data: { locked: false } };
+  return res.json();
+}
 
 interface PaginationInfo {
   page: number;
@@ -73,6 +90,16 @@ export default function BranchesPage() {
     enabled: !!session,
   });
 
+  const { data: myLockData } = useQuery({
+    queryKey: ['my-lock'],
+    queryFn: fetchMyLock,
+    enabled: !!session,
+    staleTime: 0,
+    refetchInterval: 15000,
+  });
+
+  const activeLock = myLockData?.data?.locked ? myLockData.data : null;
+
   useEffect(() => {
     if (isError) toast.error('Failed to load branches');
   }, [isError, error]);
@@ -105,6 +132,38 @@ export default function BranchesPage() {
           </div>
         </div>
       </div>
+
+      {/* In-progress reservation banner */}
+      {activeLock && activeLock.slotTime && (activeLock.ttl ?? 0) > 0 && (
+        <div className="mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+              <Timer className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-amber-800 dark:text-amber-200 truncate">
+                Slot reserved — {activeLock.branchName}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                {format(toZonedTime(parseISO(activeLock.slotTime), 'Africa/Johannesburg'), "EEEE, MMMM d 'at' HH:mm")}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={() => {
+              const slotDate = parseISO(activeLock.slotTime!);
+              const dateStr = format(slotDate, 'yyyy-MM-dd');
+              router.push(
+                `/branches/appointments/${activeLock.branchId}?date=${dateStr}&slot=${encodeURIComponent(activeLock.slotTime!)}`,
+              );
+            }}
+          >
+            Continue Booking
+          </Button>
+        </div>
+      )}
 
       {/* Search + count */}
       <div className="mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
